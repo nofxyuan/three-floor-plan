@@ -1191,7 +1191,7 @@ function createMeetingRoomStatusVisuals() {
       toneMapped: false
     }));
     badge.position.y = 1.35;
-    badge.scale.set(13.5, 3.95, 1);
+    badge.scale.set(10.2, 3, 1);
     badge.renderOrder = 12;
     group.add(badge);
 
