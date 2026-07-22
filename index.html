@@ -156,11 +156,10 @@
       </div>
 
       <div id="room-tooltip" class="room-tooltip" role="status" aria-live="polite">
-        <header><span></span><strong>區域環境</strong></header>
-        <dl>
-          <div><dt>溫度</dt><dd data-field="temperature"></dd></div>
-          <div><dt>濕度</dt><dd data-field="humidity"></dd></div>
-          <div><dt>CO₂</dt><dd data-field="co2"></dd></div>
+        <dl aria-label="區域環境數值">
+          <div><dd data-field="temperature" aria-label="溫度"></dd></div>
+          <div><dd data-field="humidity" aria-label="濕度"></dd></div>
+          <div><dd data-field="co2" aria-label="二氧化碳濃度"></dd></div>
         </dl>
       </div>
 
