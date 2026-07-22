@@ -122,6 +122,7 @@ body { overscroll-behavior: none; }
 .building-mode .power-panel,
 .building-mode .power-save-badge,
 .building-mode .interaction-hint,
+.building-mode .room-tooltip,
 .building-mode .device-tooltip {
   opacity: 0;
   visibility: hidden;
@@ -312,6 +313,16 @@ body { overscroll-behavior: none; }
 .axis-note { margin: 12px 2px 0; color: #85877f; font-size: 10px; text-align: center; }
 .axis-note span { color: #4a4c46; font-weight: 700; }
 
+.room-tooltip { position: fixed; top: 0; left: 0; z-index: 7; width: 202px; padding: 13px; color: #292a27; background: rgba(252,252,248,.94); border: 1px solid rgba(67,61,42,.12); border-radius: 14px; box-shadow: 0 14px 40px rgba(31,31,27,.14); backdrop-filter: blur(16px); pointer-events: none; opacity: 0; visibility: hidden; transform: translate(14px,14px) scale(.96); transform-origin: top left; transition: opacity .14s ease, visibility .14s ease, transform .14s ease; }
+.room-tooltip.visible { opacity: 1; visibility: visible; transform: translate(14px,14px) scale(1); }
+.room-tooltip header { display: flex; align-items: center; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid rgba(35,36,32,.08); }
+.room-tooltip header span { width: 8px; height: 8px; border-radius: 50%; background: #e6c96f; box-shadow: 0 0 0 4px rgba(230,201,111,.18); }
+.room-tooltip header strong { font-size: 12px; font-weight: 650; }
+.room-tooltip dl { display: grid; gap: 7px; margin: 10px 0 0; }
+.room-tooltip dl div { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.room-tooltip dt { color: #898981; font-size: 10px; }
+.room-tooltip dd { margin: 0; color: #252622; font-size: 11px; font-weight: 700; }
+
 .device-tooltip { position: fixed; top: 0; left: 0; z-index: 8; width: 246px; padding: 14px; color: #f5f5f1; background: rgba(23,24,21,.92); border: 1px solid rgba(255,255,255,.1); border-radius: 15px; box-shadow: 0 16px 46px rgba(18,19,16,.24); backdrop-filter: blur(16px); pointer-events: none; opacity: 0; visibility: hidden; transform: translate(14px,14px) scale(.96); transform-origin: top left; transition: opacity .14s ease, visibility .14s ease, transform .14s ease; }
 .device-tooltip.visible { opacity: 1; visibility: visible; transform: translate(14px,14px) scale(1); }
 .device-tooltip header { display: flex; align-items: center; gap: 9px; padding-bottom: 11px; border-bottom: 1px solid rgba(255,255,255,.1); }
@@ -372,6 +383,7 @@ body { overscroll-behavior: none; }
   .power-panel { top: 76px; right: 16px; padding: 15px; }
   .power-save-badge { left: 16px; bottom: 16px; }
   .device-tooltip { width: 218px; }
+  .room-tooltip { width: 190px; }
   .interaction-hint { bottom: 18px; }
   .building-overview { top: auto; bottom: 32px; left: 20px; transform: none; }
   .building-overview h1 { font-size: 32px; }
