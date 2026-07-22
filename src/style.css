@@ -286,6 +286,15 @@ body { overscroll-behavior: none; }
 .drag-toggle input:checked + i { background: #4caf50; }
 .drag-toggle input:checked + i::after { transform: translateX(15px); }
 .drag-toggle input:focus-visible + i { box-shadow: 0 0 0 3px rgba(71,166,184,.18), inset 0 0 0 1px rgba(25,26,23,.08); }
+.active-drag-device { position: relative; margin-top: 11px; padding: 10px 11px 10px 14px; overflow: hidden; border: 1px solid rgba(25,26,23,.09); border-radius: 10px; background: rgba(255,255,255,.62); }
+.active-drag-device::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: #b9bbb4; transition: background-color .18s ease; }
+.active-drag-device > span, .active-drag-device > strong, .active-drag-device > small { display: block; }
+.active-drag-device > span { color: #85877f; font-size: 8px; font-weight: 700; letter-spacing: .08em; }
+.active-drag-device > strong { margin-top: 3px; color: #30312e; font-size: 12px; font-weight: 750; }
+.active-drag-device > small { margin-top: 2px; color: #85877f; font-size: 9px; }
+.active-drag-device.selected { background: rgba(71,166,184,.08); border-color: rgba(71,166,184,.28); }
+.active-drag-device.selected::before { background: #47a6b8; }
+.device-card.active-adjustment, .asset-control-card.active-adjustment { border-color: rgba(71,166,184,.5); box-shadow: 0 0 0 3px rgba(71,166,184,.1); }
 
 .meeting-status-card { margin-bottom: 12px; padding: 14px; background: rgba(255,255,255,.62); border: 1px solid rgba(28,29,26,.08); border-radius: 14px; }
 .meeting-status-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }

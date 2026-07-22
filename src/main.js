@@ -299,6 +299,9 @@ const cctvModalTitle = document.querySelector('#cctv-modal-title');
 const cctvModalStatus = document.querySelector('#cctv-modal-status');
 const cctvDirectionLabel = document.querySelector('#cctv-direction-label');
 const cctvFeedTime = document.querySelector('#cctv-feed-time');
+const activeDragDevice = document.querySelector('#active-drag-device');
+const activeDragDeviceName = document.querySelector('#active-drag-device-name');
+const activeDragDeviceDetail = document.querySelector('#active-drag-device-detail');
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const dragPlane = new THREE.Plane();
@@ -1223,6 +1226,7 @@ function setPointerFromEvent(event) {
 
 function finishDeviceDrag(event) {
   if (!draggingDevice) return;
+  const adjustedObject = draggingDevice;
   const draggedCctv = Boolean(draggingDevice.userData.cctvId);
   if (event?.pointerId != null && renderer.domElement.hasPointerCapture(event.pointerId)) {
     renderer.domElement.releasePointerCapture(event.pointerId);
@@ -1232,9 +1236,11 @@ function finishDeviceDrag(event) {
   renderer.domElement.style.cursor = '';
   if (draggedCctv) saveCctvPositions();
   else saveDevicePositions();
+  selectObjectForAdjustment(adjustedObject);
 }
 
 function beginObjectDrag(object, event) {
+  selectObjectForAdjustment(object);
   draggingDevice = object;
   setRoomHighlight(-1);
   dragPlane.set(new THREE.Vector3(0, 1, 0), -object.position.y);
@@ -1331,6 +1337,39 @@ function findDeviceCard(deviceId) {
   return [...document.querySelectorAll('.device-card')].find((card) => card.dataset.device === deviceId) || null;
 }
 
+function getDeviceAdjustmentLabel(device) {
+  const type = device.userData.config?.type;
+  const matchingDevices = [...deviceObjects.values()].filter((entry) => entry.userData.config?.type === type);
+  const number = Math.max(1, matchingDevices.indexOf(device) + 1);
+  const typeLabel = type === 'ac' ? '冷氣' : '溫濕度感應器';
+  return `${typeLabel} ${String(number).padStart(2, '0')}`;
+}
+
+function clearAdjustmentHighlights() {
+  document.querySelectorAll('.active-adjustment').forEach((element) => element.classList.remove('active-adjustment'));
+}
+
+function selectObjectForAdjustment(object) {
+  if (!object) return;
+  clearAdjustmentHighlights();
+  activeDragDevice.classList.add('selected');
+
+  if (object.userData.cctvId) {
+    const fixture = CCTV_FIXTURES.find((entry) => entry.id === object.userData.cctvId);
+    cctvSelect.value = object.userData.cctvId;
+    syncCctvControls();
+    document.querySelector('.cctv-control')?.classList.add('active-adjustment');
+    activeDragDeviceName.textContent = fixture?.label || object.userData.cctvId;
+    activeDragDeviceDetail.textContent = 'CCTV・目前調整';
+    return;
+  }
+
+  const card = findDeviceCard(object.userData.deviceId);
+  card?.classList.add('active-adjustment');
+  activeDragDeviceName.textContent = getDeviceAdjustmentLabel(object);
+  activeDragDeviceDetail.textContent = `${object.userData.config?.location || '自訂位置'}・目前調整`;
+}
+
 function syncDeviceCard(device) {
   const card = findDeviceCard(device.userData.deviceId);
   if (!card) return;
@@ -1342,6 +1381,7 @@ function syncDeviceCard(device) {
 function bindDeviceCard(card, device) {
   if (!card || card.dataset.bound === 'true') return;
   card.dataset.bound = 'true';
+  card.addEventListener('pointerdown', () => selectObjectForAdjustment(device));
   card.querySelector('.device-dot').style.background = colorToCss(device.userData.color);
   card.querySelectorAll('input[data-axis]').forEach((input) => {
     const axis = input.dataset.axis;
@@ -1492,6 +1532,7 @@ function addDevice(presetKey) {
   saveAddedDeviceConfigs(addedConfigs);
   const device = createDeviceObject(config, readSavedDevicePositions());
   bindDeviceCard(createDynamicDeviceCard(config), device);
+  selectObjectForAdjustment(device);
   saveDevicePositions();
 }
 
@@ -1871,7 +1912,10 @@ function syncCctvControls() {
   cctvAngleSelect.value = state.direction;
 }
 
-cctvSelect.addEventListener('change', syncCctvControls);
+cctvSelect.addEventListener('change', () => {
+  syncCctvControls();
+  selectObjectForAdjustment(cctvObjects.get(cctvSelect.value));
+});
 cctvStateButtons.forEach((button) => {
   button.addEventListener('click', () => {
     const cctvId = cctvSelect.value;
