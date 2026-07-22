@@ -436,25 +436,30 @@ body { overscroll-behavior: none; }
 
 .interaction-hint {
   position: fixed;
-  bottom: 25px;
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: 24px;
+  left: 24px;
   z-index: 3;
   display: flex;
   align-items: center;
-  gap: 10px;
-  opacity: .48;
+  gap: 11px;
+  padding: 10px 13px 10px 10px;
+  color: #4a4c46;
+  background: rgba(248,248,244,.72);
+  border: 1px solid rgba(28,29,26,.08);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(32,34,29,.08);
+  backdrop-filter: blur(14px);
+  opacity: .82;
   pointer-events: none;
   transition: opacity .4s ease;
 }
 
-.interaction-hint.used { opacity: 0; }
-.mouse { position: relative; width: 18px; height: 25px; border: 1.4px solid #1c1d1a; border-radius: 10px; }
-.mouse i { position: absolute; width: 2px; height: 5px; top: 4px; left: 7px; background: #1c1d1a; border-radius: 2px; animation: wheel 1.5s ease-in-out infinite; }
-.gesture-line { width: 31px; height: 1px; background: #1c1d1a; position: relative; }
-.gesture-line::before, .gesture-line::after { content: ""; position: absolute; width: 5px; height: 5px; top: -2px; border-top: 1px solid #1c1d1a; border-left: 1px solid #1c1d1a; }
-.gesture-line::before { left: 0; transform: rotate(-45deg); }
-.gesture-line::after { right: 0; transform: rotate(135deg); }
+.interaction-hint.used { opacity: .4; }
+.hint-3d { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 auto; color: #f8f8f4; background: #3c3e39; border-radius: 10px; font-size: 10px; font-weight: 800; letter-spacing: -.02em; }
+.hint-copy strong, .hint-copy small { display: block; }
+.hint-copy strong { color: #30312d; font-size: 10px; font-weight: 720; }
+.hint-copy small { display: flex; align-items: center; gap: 6px; margin-top: 3px; color: #777971; font-size: 8px; white-space: nowrap; }
+.hint-copy small i { width: 2px; height: 2px; flex: 0 0 auto; border-radius: 50%; background: #a2a49d; }
 
 #loading {
   position: fixed;
@@ -488,7 +493,8 @@ body { overscroll-behavior: none; }
   .cctv-modal { padding: 12px; }
   .cctv-dialog { padding: 12px; border-radius: 16px; }
   .cctv-dialog > footer { align-items: flex-start; flex-direction: column; gap: 4px; }
-  .interaction-hint { bottom: 18px; }
+  .interaction-hint { right: 14px; bottom: 14px; left: 14px; padding-right: 10px; }
+  .hint-copy small { gap: 4px; font-size: 7px; }
   .building-view-controls { right: 14px; bottom: 14px; }
   .building-overview { top: auto; bottom: 32px; left: 20px; transform: none; }
   .building-overview h1 { font-size: 32px; }

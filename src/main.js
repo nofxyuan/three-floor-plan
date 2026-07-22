@@ -2133,7 +2133,7 @@ document.querySelector('#device-drag-toggle').addEventListener('change', (event)
 });
 
 renderer.domElement.addEventListener('pointerdown', (event) => {
-  document.querySelector('.interaction-hint').classList.add('used');
+  if (sceneMode === 'floor') document.querySelector('.interaction-hint').classList.add('used');
   if (sceneMode === 'building' && event.button === 0) {
     setPointerFromEvent(event);
     const buildingTargets = [...buildingFloorMeshes, ...floor14Targets.filter((target) => target.isSprite)];
