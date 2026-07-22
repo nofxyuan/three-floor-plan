@@ -61,6 +61,22 @@ const ADDED_DEVICE_PRESETS = {
 const container = document.querySelector('#scene');
 const loading = document.querySelector('#loading');
 
+function readLocalSetting(key, fallback = null) {
+  try {
+    return window.localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeLocalSetting(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Storage can be unavailable in private or embedded browser contexts.
+  }
+}
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xe8e8e3);
 scene.fog = new THREE.FogExp2(0xe8e8e3, 0.0042);
@@ -802,7 +818,7 @@ function createTemperatureSensor() {
 
 function readSavedDevicePositions() {
   try {
-    return JSON.parse(localStorage.getItem(DEVICE_STORAGE_KEY) || '{}');
+    return JSON.parse(readLocalSetting(DEVICE_STORAGE_KEY, '{}'));
   } catch {
     return {};
   }
@@ -810,7 +826,7 @@ function readSavedDevicePositions() {
 
 function readAddedDeviceConfigs() {
   try {
-    const configs = JSON.parse(localStorage.getItem(ADDED_DEVICE_STORAGE_KEY) || '[]');
+    const configs = JSON.parse(readLocalSetting(ADDED_DEVICE_STORAGE_KEY, '[]'));
     return Array.isArray(configs) ? configs.filter((config) => config?.id && config?.type && config?.data) : [];
   } catch {
     return [];
@@ -818,7 +834,7 @@ function readAddedDeviceConfigs() {
 }
 
 function saveAddedDeviceConfigs(configs) {
-  localStorage.setItem(ADDED_DEVICE_STORAGE_KEY, JSON.stringify(configs));
+  writeLocalSetting(ADDED_DEVICE_STORAGE_KEY, JSON.stringify(configs));
 }
 
 function saveDevicePositions() {
@@ -826,7 +842,7 @@ function saveDevicePositions() {
   deviceObjects.forEach((object, id) => {
     positions[id] = { x: object.position.x, y: object.position.y, z: object.position.z, color: object.userData.color };
   });
-  localStorage.setItem(DEVICE_STORAGE_KEY, JSON.stringify(positions));
+  writeLocalSetting(DEVICE_STORAGE_KEY, JSON.stringify(positions));
 }
 
 function applyDeviceColor(device, colorName) {
@@ -1326,8 +1342,8 @@ const powerStatusTitle = document.querySelector('#power-status-title');
 const powerStatusDetail = document.querySelector('#power-status-detail');
 const POWER_SAVE_ENABLED_KEY = 'three-floor-plan-power-save-enabled';
 const POWER_SAVE_MINUTES_KEY = 'three-floor-plan-power-save-minutes';
-let powerSaveEnabled = localStorage.getItem(POWER_SAVE_ENABLED_KEY) !== 'false';
-let powerSaveMinutes = THREE.MathUtils.clamp(Number(localStorage.getItem(POWER_SAVE_MINUTES_KEY)) || 3, 1, 60);
+let powerSaveEnabled = readLocalSetting(POWER_SAVE_ENABLED_KEY) !== 'false';
+let powerSaveMinutes = THREE.MathUtils.clamp(Number(readLocalSetting(POWER_SAVE_MINUTES_KEY)) || 3, 1, 60);
 let lastPowerActivity = Date.now();
 let lastActivityUpdate = 0;
 
@@ -1431,7 +1447,7 @@ document.querySelector('#close-power-panel').addEventListener('click', () => set
 
 powerSaveToggle.addEventListener('change', () => {
   powerSaveEnabled = powerSaveToggle.checked;
-  localStorage.setItem(POWER_SAVE_ENABLED_KEY, String(powerSaveEnabled));
+  writeLocalSetting(POWER_SAVE_ENABLED_KEY, String(powerSaveEnabled));
   lastPowerActivity = Date.now();
   if (!powerSaveEnabled) exitPowerSave(true);
   updatePowerStatus();
@@ -1445,7 +1461,7 @@ function applyPowerSaveMinutes(normalize = false) {
   }
   powerSaveMinutes = THREE.MathUtils.clamp(Math.round(inputMinutes), 1, 60);
   if (normalize) powerSaveMinutesInput.value = String(powerSaveMinutes);
-  localStorage.setItem(POWER_SAVE_MINUTES_KEY, String(powerSaveMinutes));
+  writeLocalSetting(POWER_SAVE_MINUTES_KEY, String(powerSaveMinutes));
   lastPowerActivity = Date.now();
   updatePowerStatus();
 }
