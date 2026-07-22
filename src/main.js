@@ -235,6 +235,17 @@ let autoRotateActive = false;
 let powerSaveActive = false;
 let buildingAutoRotateEnabled = true;
 let orbitInteractionActive = false;
+let buildingAutoZoomBaseDistance = 120;
+const BUILDING_AUTO_ZOOM_SPEED = 0.00052;
+const BUILDING_AUTO_ZOOM_AMOUNT = 0.14;
+
+function getBuildingAutoZoomPulse(now = performance.now()) {
+  return 1 + Math.sin(now * BUILDING_AUTO_ZOOM_SPEED) * BUILDING_AUTO_ZOOM_AMOUNT;
+}
+
+function syncBuildingAutoZoomBase(distance = camera.position.distanceTo(controls.target), now = performance.now()) {
+  buildingAutoZoomBaseDistance = distance / getBuildingAutoZoomPulse(now);
+}
 
 function updateAutoRotate() {
   const rotateBuilding = sceneMode === 'building' && buildingAutoRotateEnabled && !orbitInteractionActive;
@@ -1775,6 +1786,7 @@ function updateCameraAnimation(now) {
   controls.target.lerpVectors(animation.fromTarget, animation.toTarget, eased);
   if (progress === 1) {
     animation = null;
+    if (sceneMode === 'building') syncBuildingAutoZoomBase();
     updateAutoRotate();
   }
 }
@@ -1829,6 +1841,7 @@ function zoomBuilding(factor) {
   const offset = camera.position.clone().sub(controls.target);
   const distance = THREE.MathUtils.clamp(offset.length() * factor, controls.minDistance, controls.maxDistance);
   camera.position.copy(controls.target).add(offset.normalize().multiplyScalar(distance));
+  syncBuildingAutoZoomBase(distance);
   controls.update();
   markPowerActivity();
 }
@@ -2240,6 +2253,7 @@ async function init() {
   controls.minDistance = 48;
   controls.maxDistance = 210;
   controls.update();
+  syncBuildingAutoZoomBase();
   try {
     const response = await fetch(SVG_URL);
     if (!response.ok) throw new Error(`SVG request failed: ${response.status}`);
@@ -2276,6 +2290,14 @@ function animate(now) {
   if (autoRotateActive) {
     const offset = camera.position.clone().sub(controls.target);
     offset.applyAxisAngle(AUTO_ROTATE_AXIS, AUTO_ROTATE_SPEED * deltaSeconds);
+    if (sceneMode === 'building') {
+      const autoZoomDistance = THREE.MathUtils.clamp(
+        buildingAutoZoomBaseDistance * getBuildingAutoZoomPulse(now),
+        controls.minDistance,
+        controls.maxDistance
+      );
+      offset.setLength(autoZoomDistance);
+    }
     camera.position.copy(controls.target).add(offset);
   }
   deviceObjects.forEach((device) => {
