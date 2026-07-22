@@ -16,6 +16,23 @@ const ROOM_HOVER_OVERRIDES = [
   { id: '404', environmentId: 404, x1: 629, y1: 152.6, x2: 704.2, y2: 270.3 },
   { id: '406', environmentId: 406, x1: 629, y1: 39.2, x2: 707.7, y2: 152.6 }
 ];
+const MEETING_ROOM_STORAGE_KEY = 'three-floor-plan-meeting-room-statuses';
+const MEETING_ROOM_COLORS = {
+  reserved: 0xf39a32,
+  occupied: 0x4caf50
+};
+const MEETING_ROOM_LABELS = {
+  reserved: '預約中',
+  occupied: '使用中'
+};
+const MEETING_ROOMS = [
+  { id: '401', name: '401-Autumn Room', x1: 704.2, y1: 152.6, x2: 849.6, y2: 270.3 },
+  { id: '402', name: '402-Autumn Room', x1: 707.7, y1: 39.2, x2: 834.1, y2: 152.6 },
+  { id: '403', name: '403-Autumn Room', x1: 438.4, y1: 168.2, x2: 529.9, y2: 279.2 },
+  { id: '404', name: '404-Autumn Room', x1: 629, y1: 152.6, x2: 704.2, y2: 270.3 },
+  { id: '405', name: '405-Sky Room', x1: 852.9, y1: 268, x2: 1055.8, y2: 344.5 },
+  { id: '406', name: '406-Autumn Room', x1: 629, y1: 39.2, x2: 707.7, y2: 152.6 }
+];
 
 // Structural diagonal walls that are represented in the source SVG by two
 // parallel outline polylines. They need a single solid wall on the centerline.
@@ -80,6 +97,30 @@ function writeLocalSetting(key, value) {
     // Storage can be unavailable in private or embedded browser contexts.
   }
 }
+
+function readMeetingRoomStates() {
+  const defaults = Object.fromEntries(MEETING_ROOMS.map((room) => [room.id, {
+    enabled: room.id === '404' || room.id === '406',
+    status: room.id === '406' ? 'reserved' : 'occupied'
+  }]));
+  try {
+    const saved = JSON.parse(readLocalSetting(MEETING_ROOM_STORAGE_KEY, '{}'));
+    MEETING_ROOMS.forEach((room) => {
+      const entry = saved?.[room.id];
+      if (!entry || typeof entry.enabled !== 'boolean' || !MEETING_ROOM_COLORS[entry.status]) return;
+      defaults[room.id] = { enabled: entry.enabled, status: entry.status };
+    });
+  } catch {
+    // Keep defaults when saved meeting-room settings are unavailable.
+  }
+  return defaults;
+}
+
+function saveMeetingRoomStates() {
+  writeLocalSetting(MEETING_ROOM_STORAGE_KEY, JSON.stringify(meetingRoomStates));
+}
+
+const meetingRoomStates = readMeetingRoomStates();
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xe8e8e3);
@@ -166,6 +207,7 @@ let buildingFloorMeshes = [];
 let sceneMode = 'building';
 
 const deviceObjects = new Map();
+const meetingRoomVisuals = new Map();
 const deviceTooltip = document.querySelector('#device-tooltip');
 const roomTooltip = document.querySelector('#room-tooltip');
 const raycaster = new THREE.Raycaster();
@@ -1079,6 +1121,87 @@ function createDevices() {
   });
 }
 
+function drawMeetingRoomBadge(visual, room, status) {
+  const { canvas, context, texture } = visual.userData;
+  const color = new THREE.Color(MEETING_ROOM_COLORS[status]).getStyle();
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.save();
+  context.shadowColor = 'rgba(20, 24, 19, .22)';
+  context.shadowBlur = 16;
+  context.shadowOffsetY = 6;
+  context.fillStyle = color;
+  context.beginPath();
+  context.roundRect(10, 10, canvas.width - 20, canvas.height - 26, 28);
+  context.fill();
+  context.restore();
+  context.fillStyle = '#ffffff';
+  context.font = '700 31px Inter, system-ui, sans-serif';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(`${room.id}  ${MEETING_ROOM_LABELS[status]}`, canvas.width / 2, canvas.height / 2 - 3);
+  texture.needsUpdate = true;
+}
+
+function updateMeetingRoomVisual(roomId) {
+  const visual = meetingRoomVisuals.get(roomId);
+  const state = meetingRoomStates[roomId];
+  const room = MEETING_ROOMS.find((entry) => entry.id === roomId);
+  if (!visual || !state || !room) return;
+  visual.visible = state.enabled;
+  visual.userData.floor.material.color.setHex(MEETING_ROOM_COLORS[state.status]);
+  visual.userData.floor.material.opacity = state.status === 'reserved' ? 0.24 : 0.21;
+  drawMeetingRoomBadge(visual, room, state.status);
+}
+
+function createMeetingRoomStatusVisuals() {
+  MEETING_ROOMS.forEach((room) => {
+    const width = (room.x2 - room.x1) * SCALE;
+    const depth = (room.y2 - room.y1) * SCALE;
+    const center = svgPointToWorld((room.x1 + room.x2) / 2, (room.y1 + room.y2) / 2);
+    const group = new THREE.Group();
+    group.position.set(center.x, 0, center.z);
+
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(width, depth),
+      new THREE.MeshBasicMaterial({
+        color: MEETING_ROOM_COLORS.occupied,
+        transparent: true,
+        opacity: 0.21,
+        depthWrite: false,
+        toneMapped: false,
+        side: THREE.DoubleSide
+      })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = 0.065;
+    floor.renderOrder = 1;
+    group.add(floor);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 384;
+    canvas.height = 112;
+    const context = canvas.getContext('2d');
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearFilter;
+    const badge = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      depthTest: false,
+      toneMapped: false
+    }));
+    badge.position.y = 1.35;
+    badge.scale.set(13.5, 3.95, 1);
+    badge.renderOrder = 12;
+    group.add(badge);
+
+    group.userData = { floor, badge, canvas, context, texture };
+    meetingRoomVisuals.set(room.id, group);
+    model.add(group);
+    updateMeetingRoomVisual(room.id);
+  });
+}
+
 function addDevice(presetKey) {
   const preset = ADDED_DEVICE_PRESETS[presetKey];
   if (!preset) return;
@@ -1394,6 +1517,9 @@ updateAutoRotate();
 
 const devicePanel = document.querySelector('#device-panel');
 const deviceControlsButton = document.querySelector('#device-controls');
+const meetingRoomSelect = document.querySelector('#meeting-room-select');
+const meetingStatusToggle = document.querySelector('#meeting-status-toggle');
+const meetingStatusButtons = [...document.querySelectorAll('[data-meeting-status]')];
 const powerPanel = document.querySelector('#power-panel');
 const powerControlsButton = document.querySelector('#power-controls');
 const powerSaveToggle = document.querySelector('#power-save-toggle');
@@ -1406,6 +1532,34 @@ let powerSaveEnabled = readLocalSetting(POWER_SAVE_ENABLED_KEY) !== 'false';
 let powerSaveMinutes = THREE.MathUtils.clamp(Number(readLocalSetting(POWER_SAVE_MINUTES_KEY)) || 3, 1, 60);
 let lastPowerActivity = Date.now();
 let lastActivityUpdate = 0;
+
+function syncMeetingRoomControls() {
+  const state = meetingRoomStates[meetingRoomSelect.value];
+  if (!state) return;
+  meetingStatusToggle.checked = state.enabled;
+  meetingStatusButtons.forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.meetingStatus === state.status));
+  });
+}
+
+meetingRoomSelect.addEventListener('change', syncMeetingRoomControls);
+meetingStatusToggle.addEventListener('change', () => {
+  const roomId = meetingRoomSelect.value;
+  meetingRoomStates[roomId].enabled = meetingStatusToggle.checked;
+  updateMeetingRoomVisual(roomId);
+  saveMeetingRoomStates();
+});
+meetingStatusButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const roomId = meetingRoomSelect.value;
+    meetingRoomStates[roomId].status = button.dataset.meetingStatus;
+    meetingRoomStates[roomId].enabled = true;
+    syncMeetingRoomControls();
+    updateMeetingRoomVisual(roomId);
+    saveMeetingRoomStates();
+  });
+});
+syncMeetingRoomControls();
 
 powerSaveToggle.checked = powerSaveEnabled;
 powerSaveMinutesInput.value = String(powerSaveMinutes);
@@ -1666,6 +1820,7 @@ async function init() {
     createWallInstances(wallSegments);
     createRoomHoverMap(wallSegments);
     createColumns(svg);
+    createMeetingRoomStatusVisuals();
     createDevices();
     requestAnimationFrame(() => loading.classList.add('hidden'));
   } catch (error) {

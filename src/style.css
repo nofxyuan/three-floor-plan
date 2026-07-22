@@ -287,6 +287,36 @@ body { overscroll-behavior: none; }
 .drag-toggle input:checked + i::after { transform: translateX(15px); }
 .drag-toggle input:focus-visible + i { box-shadow: 0 0 0 3px rgba(71,166,184,.18), inset 0 0 0 1px rgba(25,26,23,.08); }
 
+.meeting-status-card { margin-bottom: 12px; padding: 14px; background: rgba(255,255,255,.62); border: 1px solid rgba(28,29,26,.08); border-radius: 14px; }
+.meeting-status-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.meeting-status-heading strong, .meeting-status-heading small { display: block; }
+.meeting-status-heading strong { font-size: 12px; font-weight: 700; }
+.meeting-status-heading small { margin-top: 2px; color: #777970; font-size: 9px; }
+.meeting-status-icon { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 3px; background: linear-gradient(135deg, #f39a32 0 49%, #4caf50 51% 100%); box-shadow: 0 0 0 4px rgba(34,35,31,.05); }
+.meeting-room-select { display: grid; grid-template-columns: 58px 1fr; align-items: center; gap: 8px; }
+.meeting-room-select > span { color: #777970; font-size: 10px; }
+.meeting-room-select select { min-width: 0; height: 35px; padding: 0 28px 0 9px; border: 1px solid rgba(25,26,23,.1); border-radius: 9px; outline: 0; color: #20211e; background: #f7f7f3; font: 600 10px/1 inherit; cursor: pointer; }
+.meeting-room-select select:focus { border-color: #6e9f68; box-shadow: 0 0 0 3px rgba(76,175,80,.12); }
+.meeting-toggle { display: flex; align-items: center; gap: 10px; margin-top: 11px; padding-top: 11px; border-top: 1px solid rgba(25,26,23,.07); cursor: pointer; }
+.meeting-toggle > span { min-width: 0; margin-right: auto; }
+.meeting-toggle strong, .meeting-toggle small { display: block; }
+.meeting-toggle strong { color: #30312e; font-size: 11px; font-weight: 650; }
+.meeting-toggle small { margin-top: 2px; color: #85877f; font-size: 9px; }
+.meeting-toggle input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.meeting-toggle > i { position: relative; width: 36px; height: 21px; flex: 0 0 auto; border-radius: 99px; background: #b9bbb4; box-shadow: inset 0 0 0 1px rgba(25,26,23,.08); transition: background-color .18s ease; }
+.meeting-toggle > i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 2px 5px rgba(20,21,18,.2); transition: transform .18s ease; }
+.meeting-toggle input:checked + i { background: #4caf50; }
+.meeting-toggle input:checked + i::after { transform: translateX(15px); }
+.meeting-toggle input:focus-visible + i { box-shadow: 0 0 0 3px rgba(76,175,80,.18), inset 0 0 0 1px rgba(25,26,23,.08); }
+.meeting-state-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 11px; }
+.meeting-state-picker button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 8px; border: 1px solid rgba(25,26,23,.1); border-radius: 9px; color: #64665f; background: #f7f7f3; font: 650 10px/1 inherit; cursor: pointer; transition: border-color .16s ease, background-color .16s ease, color .16s ease, transform .16s ease; }
+.meeting-state-picker button:active { transform: scale(.97); }
+.meeting-state-picker button i { width: 8px; height: 8px; border-radius: 50%; }
+.meeting-state-picker button[data-meeting-status="reserved"] i { background: #f39a32; }
+.meeting-state-picker button[data-meeting-status="occupied"] i { background: #4caf50; }
+.meeting-state-picker button[data-meeting-status="reserved"][aria-pressed="true"] { color: #8a4e0b; background: rgba(243,154,50,.14); border-color: rgba(214,126,27,.42); }
+.meeting-state-picker button[data-meeting-status="occupied"][aria-pressed="true"] { color: #286f2c; background: rgba(76,175,80,.13); border-color: rgba(65,149,69,.4); }
+
 .device-card { padding: 14px; background: rgba(255,255,255,.62); border: 1px solid rgba(28,29,26,.08); border-radius: 14px; }
 .device-card + .device-card { margin-top: 9px; }
 .device-card-title { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
