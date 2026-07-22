@@ -916,10 +916,12 @@ function updateRoomTooltip(regionId, clientX, clientY) {
   }
   const temperature = 23.1 + ((regionId * 7) % 19) / 10;
   const humidity = 48 + ((regionId * 11) % 14);
+  const co2 = 480 + ((regionId * 47) % 360);
   roomTooltip.querySelector('[data-field="temperature"]').textContent = `${temperature.toFixed(1)} °C`;
   roomTooltip.querySelector('[data-field="humidity"]').textContent = `${humidity} %RH`;
+  roomTooltip.querySelector('[data-field="co2"]').textContent = `${co2} ppm`;
   roomTooltip.style.left = `${Math.max(8, Math.min(clientX, innerWidth - 230))}px`;
-  roomTooltip.style.top = `${Math.max(8, Math.min(clientY, innerHeight - 132))}px`;
+  roomTooltip.style.top = `${Math.max(8, Math.min(clientY, innerHeight - 160))}px`;
   roomTooltip.classList.add('visible');
 }
 
