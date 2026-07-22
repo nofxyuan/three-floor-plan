@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#e8e8e3" />
+    <title>14F Spatial Model</title>
+  </head>
+  <body>
+    <main id="app" aria-label="3D floor plan">
+      <div id="scene"></div>
+
+      <div class="brand-mark" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+
+      <section id="building-overview" class="building-overview" aria-label="大樓樓層導覽">
+        <span class="overview-eyebrow">BUILDING OVERVIEW</span>
+        <h1>永彰科技大樓</h1>
+        <p>共 22 層樓，選擇樓層即可進入空間平面圖。</p>
+        <button id="enter-14f" type="button">
+          <span><strong>14F</strong><small>永彰科技辦公室</small></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+        </button>
+      </section>
+
+      <nav class="toolbar" aria-label="View controls">
+        <button id="back-building" type="button" aria-label="返回大樓總覽" title="返回大樓總覽">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/><path d="M8 12h11"/></svg>
+        </button>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="view-3d" class="active" type="button" aria-label="3D view" title="3D view">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg>
+        </button>
+        <button id="view-top" type="button" aria-label="Top view" title="Top view">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 4v5h5V4M20 13h-6v7M4 14h5v6"/></svg>
+        </button>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="reset-view" type="button" aria-label="Reset view" title="Reset view">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 5v6h-6"/></svg>
+        </button>
+        <button id="fullscreen" type="button" aria-label="Fullscreen" title="Fullscreen">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+        </button>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="device-controls" type="button" aria-label="設備座標" title="設備座標" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M10 14v6"/><circle cx="14" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+        </button>
+      </nav>
+
+      <aside id="device-panel" class="device-panel" aria-label="設備座標控制">
+        <header class="panel-header">
+          <div>
+            <span class="eyebrow">POSITION</span>
+            <h2>設備座標</h2>
+          </div>
+          <button id="close-device-panel" type="button" aria-label="關閉設備座標">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </header>
+
+        <section class="device-creator" aria-label="新增裝置">
+          <label for="new-device-type">新增裝置</label>
+          <div class="device-add-row">
+            <select id="new-device-type">
+              <option value="ac-02">冷氣02</option>
+              <option value="sensor-02">溫濕度感應器02</option>
+            </select>
+            <button id="add-device" type="button">新增</button>
+          </div>
+          <label class="drag-toggle" for="device-drag-toggle">
+            <span><strong>物件拖曳</strong><small>開啟後可直接拖曳裝置</small></span>
+            <input id="device-drag-toggle" type="checkbox">
+            <i aria-hidden="true"></i>
+          </label>
+        </section>
+
+        <section class="device-card" data-device="air-conditioner">
+          <div class="device-card-title">
+            <span class="device-dot ac-dot"></span>
+            <div><strong>冷氣</strong><small>總經理室上方</small></div>
+          </div>
+          <div class="axis-grid">
+            <label><span>X</span><input data-axis="x" type="number" step="0.1" inputmode="decimal"></label>
+            <label><span>Y</span><input data-axis="y" type="number" step="0.1" inputmode="decimal"></label>
+            <label><span>Z</span><input data-axis="z" type="number" step="0.1" inputmode="decimal"></label>
+          </div>
+          <div class="color-picker" aria-label="冷氣設備顏色">
+            <span>狀態</span>
+            <button class="color-swatch green" data-color="green" type="button" aria-label="綠色" aria-pressed="true"></button>
+            <button class="color-swatch red" data-color="red" type="button" aria-label="紅色" aria-pressed="false"></button>
+            <button class="color-swatch gray" data-color="gray" type="button" aria-label="灰色" aria-pressed="false"></button>
+          </div>
+        </section>
+
+        <section class="device-card" data-device="temperature-sensor">
+          <div class="device-card-title">
+            <span class="device-dot sensor-dot"></span>
+            <div><strong>溫濕度感應器</strong><small>擴編主管室左側</small></div>
+          </div>
+          <div class="axis-grid">
+            <label><span>X</span><input data-axis="x" type="number" step="0.1" inputmode="decimal"></label>
+            <label><span>Y</span><input data-axis="y" type="number" step="0.1" inputmode="decimal"></label>
+            <label><span>Z</span><input data-axis="z" type="number" step="0.1" inputmode="decimal"></label>
+          </div>
+          <div class="color-picker" aria-label="溫濕度感應器顏色">
+            <span>狀態</span>
+            <button class="color-swatch green" data-color="green" type="button" aria-label="綠色" aria-pressed="true"></button>
+            <button class="color-swatch red" data-color="red" type="button" aria-label="紅色" aria-pressed="false"></button>
+            <button class="color-swatch gray" data-color="gray" type="button" aria-label="灰色" aria-pressed="false"></button>
+          </div>
+        </section>
+
+        <p class="axis-note"><span>X</span> 左右　<span>Y</span> 高度　<span>Z</span> 前後</p>
+      </aside>
+
+      <div class="interaction-hint" aria-hidden="true">
+        <span class="mouse"><i></i></span>
+        <span class="gesture-line"></span>
+      </div>
+
+      <div id="device-tooltip" class="device-tooltip" role="status" aria-live="polite">
+        <header>
+          <span class="tooltip-status-dot"></span>
+          <strong data-field="name"></strong>
+        </header>
+        <dl>
+          <div><dt>用電量</dt><dd data-field="energy"></dd></div>
+          <div><dt>運轉時間</dt><dd data-field="runtime"></dd></div>
+          <div><dt>狀態</dt><dd data-field="status"></dd></div>
+          <div><dt>歸屬閘道器</dt><dd data-field="gateway"></dd></div>
+        </dl>
+      </div>
+
+      <div id="loading" role="status" aria-live="polite">
+        <div class="loader-mark"><i></i><i></i><i></i></div>
+      </div>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
