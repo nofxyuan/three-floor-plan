@@ -78,6 +78,33 @@
           </label>
         </section>
 
+        <section class="meeting-status-card" aria-label="會議室使用狀態">
+          <div class="meeting-status-heading">
+            <span class="meeting-status-icon" aria-hidden="true"></span>
+            <div><strong>會議室使用狀態</strong><small>同步顯示於 3D／2D 畫面</small></div>
+          </div>
+          <label class="meeting-room-select" for="meeting-room-select">
+            <span>會議室</span>
+            <select id="meeting-room-select">
+              <option value="401">401-Autumn Room</option>
+              <option value="402">402-Autumn Room</option>
+              <option value="403">403-Autumn Room</option>
+              <option value="404" selected>404-Autumn Room</option>
+              <option value="405">405-Sky Room</option>
+              <option value="406">406-Autumn Room</option>
+            </select>
+          </label>
+          <label class="meeting-toggle" for="meeting-status-toggle">
+            <span><strong>顯示狀態</strong><small>開啟後顯示區域色彩與狀態牌</small></span>
+            <input id="meeting-status-toggle" type="checkbox" checked>
+            <i aria-hidden="true"></i>
+          </label>
+          <div class="meeting-state-picker" role="group" aria-label="會議室狀態">
+            <button data-meeting-status="reserved" type="button" aria-pressed="false"><i></i>預約中</button>
+            <button data-meeting-status="occupied" type="button" aria-pressed="true"><i></i>使用中</button>
+          </div>
+        </section>
+
         <section class="device-card" data-device="air-conditioner">
           <div class="device-card-title">
             <span class="device-dot ac-dot"></span>
