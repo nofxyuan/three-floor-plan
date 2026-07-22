@@ -129,6 +129,16 @@ body { overscroll-behavior: none; }
   pointer-events: none;
 }
 
+.building-view-controls { position: fixed; right: 28px; bottom: 28px; z-index: 5; display: flex; align-items: center; gap: 5px; padding: 7px; border: 1px solid rgba(25,26,23,.09); border-radius: 16px; background: rgba(248,248,244,.88); box-shadow: 0 16px 44px rgba(40,42,37,.13); backdrop-filter: blur(16px); opacity: 0; visibility: hidden; transform: translateY(8px); transition: opacity .25s ease, visibility .25s ease, transform .25s ease; pointer-events: none; }
+.building-mode .building-view-controls { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
+.building-view-controls button { display: flex; align-items: center; justify-content: center; gap: 5px; min-width: 36px; height: 36px; padding: 0 9px; border: 0; border-radius: 10px; color: #52544e; background: transparent; cursor: pointer; transition: color .16s ease, background-color .16s ease, transform .16s ease; }
+.building-view-controls button:hover { color: #23241f; background: rgba(32,33,29,.07); }
+.building-view-controls button:active { transform: scale(.94); }
+.building-view-controls button.active { color: #fff; background: #252721; }
+.building-view-controls svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.building-view-controls span:not(.divider) { font-size: 9px; font-weight: 750; letter-spacing: .02em; }
+.building-view-controls .divider { width: 1px; height: 22px; margin: 0 3px; background: rgba(25,26,23,.1); }
+
 .toolbar {
   position: fixed;
   top: 24px;
@@ -479,6 +489,7 @@ body { overscroll-behavior: none; }
   .cctv-dialog { padding: 12px; border-radius: 16px; }
   .cctv-dialog > footer { align-items: flex-start; flex-direction: column; gap: 4px; }
   .interaction-hint { bottom: 18px; }
+  .building-view-controls { right: 14px; bottom: 14px; }
   .building-overview { top: auto; bottom: 32px; left: 20px; transform: none; }
   .building-overview h1 { font-size: 32px; }
   .building-overview p { margin-bottom: 16px; }
