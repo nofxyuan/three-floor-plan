@@ -46,6 +46,9 @@
         <button id="device-controls" type="button" aria-label="設備座標" title="設備座標" aria-expanded="false">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M10 14v6"/><circle cx="14" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
         </button>
+        <button id="power-controls" type="button" aria-label="省電模式" title="省電模式" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 4.5C12 4.7 7.2 7.8 6.1 13.2c-.6 3.2 1.5 5.8 4.8 5.8 5.8 0 8.5-6.1 8.6-14.5Z"/><path d="M4.5 20c2.3-5.2 5.8-8.4 10.9-10.7"/></svg>
+        </button>
       </nav>
 
       <aside id="device-panel" class="device-panel" aria-label="設備座標控制">
@@ -113,6 +116,39 @@
 
         <p class="axis-note"><span>X</span> 左右　<span>Y</span> 高度　<span>Z</span> 前後</p>
       </aside>
+
+      <aside id="power-panel" class="power-panel" aria-label="省電模式設定">
+        <header class="panel-header">
+          <div>
+            <span class="eyebrow">ENERGY SAVING</span>
+            <h2>省電模式</h2>
+          </div>
+          <button id="close-power-panel" type="button" aria-label="關閉省電模式設定">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </header>
+
+        <label class="power-toggle" for="power-save-toggle">
+          <span><strong>自動省電</strong><small>閒置後切換為低更新率 2D 俯視</small></span>
+          <input id="power-save-toggle" type="checkbox" checked>
+          <i aria-hidden="true"></i>
+        </label>
+
+        <label class="power-time" for="power-save-minutes">
+          <span><strong>閒置時間</strong><small>1～60 分鐘</small></span>
+          <span class="minute-input"><input id="power-save-minutes" type="number" min="1" max="60" step="1" value="3" inputmode="numeric"><em>分鐘</em></span>
+        </label>
+
+        <div class="power-status" role="status" aria-live="polite">
+          <span class="power-status-dot"></span>
+          <div><strong id="power-status-title">3D 運行中</strong><small id="power-status-detail">3 分鐘後進入省電模式</small></div>
+        </div>
+      </aside>
+
+      <div id="power-save-badge" class="power-save-badge" role="status" aria-live="polite">
+        <span>2D</span>
+        <div><strong>省電模式</strong><small>移動滑鼠以恢復 3D</small></div>
+      </div>
 
       <div class="interaction-hint" aria-hidden="true">
         <span class="mouse"><i></i></span>
