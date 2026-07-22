@@ -35,6 +35,7 @@ const MEETING_ROOMS = [
 ];
 const LIGHTING_STORAGE_KEY = 'three-floor-plan-lighting-states';
 const CCTV_STORAGE_KEY = 'three-floor-plan-cctv-states';
+const CCTV_POSITION_STORAGE_KEY = 'three-floor-plan-cctv-positions';
 const CCTV_DIRECTIONS = {
   n: { label: '北', degrees: 0 },
   ne: { label: '東北', degrees: 45 },
@@ -183,6 +184,24 @@ function saveLightingStates() {
 
 function saveCctvStates() {
   writeLocalSetting(CCTV_STORAGE_KEY, JSON.stringify(cctvStates));
+}
+
+function readSavedCctvPositions() {
+  try {
+    return JSON.parse(readLocalSetting(CCTV_POSITION_STORAGE_KEY, '{}'));
+  } catch {
+    return {};
+  }
+}
+
+const savedCctvPositions = readSavedCctvPositions();
+
+function saveCctvPositions() {
+  const positions = {};
+  cctvObjects.forEach((object, id) => {
+    positions[id] = { x: object.position.x, y: object.position.y, z: object.position.z };
+  });
+  writeLocalSetting(CCTV_POSITION_STORAGE_KEY, JSON.stringify(positions));
 }
 
 const scene = new THREE.Scene();
@@ -1090,8 +1109,12 @@ function updateCctvObject(cctvId) {
 function createCctvFixtures() {
   CCTV_FIXTURES.forEach((fixture) => {
     const object = createCctvCamera();
-    const position = svgPointToWorld(fixture.svgX, fixture.svgY);
-    object.position.set(position.x, 5.15, position.z);
+    const defaultPosition = svgPointToWorld(fixture.svgX, fixture.svgY);
+    const savedPosition = savedCctvPositions[fixture.id];
+    const position = savedPosition && Number.isFinite(savedPosition.x) && Number.isFinite(savedPosition.z)
+      ? savedPosition
+      : { x: defaultPosition.x, y: 5.15, z: defaultPosition.z };
+    object.position.set(position.x, Number.isFinite(position.y) ? position.y : 5.15, position.z);
     object.scale.setScalar(0.88);
     object.userData.cctvId = fixture.id;
     object.userData.label = fixture.label;
@@ -1200,13 +1223,28 @@ function setPointerFromEvent(event) {
 
 function finishDeviceDrag(event) {
   if (!draggingDevice) return;
+  const draggedCctv = Boolean(draggingDevice.userData.cctvId);
   if (event?.pointerId != null && renderer.domElement.hasPointerCapture(event.pointerId)) {
     renderer.domElement.releasePointerCapture(event.pointerId);
   }
   draggingDevice = null;
   controls.enabled = true;
   renderer.domElement.style.cursor = '';
-  saveDevicePositions();
+  if (draggedCctv) saveCctvPositions();
+  else saveDevicePositions();
+}
+
+function beginObjectDrag(object, event) {
+  draggingDevice = object;
+  setRoomHighlight(-1);
+  dragPlane.set(new THREE.Vector3(0, 1, 0), -object.position.y);
+  controls.enabled = false;
+  clearDeviceHover();
+  clearRoomTooltip();
+  renderer.domElement.style.cursor = 'grabbing';
+  renderer.domElement.setPointerCapture(event.pointerId);
+  event.preventDefault();
+  event.stopImmediatePropagation();
 }
 
 function updateDeviceTooltip(device, clientX, clientY) {
@@ -2023,9 +2061,12 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
     const cctvHit = raycaster.intersectObjects([...cctvObjects.values()], true)[0];
     const cctv = cctvHit ? getCctvRoot(cctvHit.object) : null;
     if (cctv) {
-      openCctvConnection(cctv.userData.cctvId);
-      event.preventDefault();
-      event.stopImmediatePropagation();
+      if (deviceDragEnabled) beginObjectDrag(cctv, event);
+      else {
+        openCctvConnection(cctv.userData.cctvId);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
       return;
     }
   }
@@ -2034,15 +2075,7 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
   const hit = raycaster.intersectObjects([...deviceObjects.values()], true)[0];
   const device = hit ? getDeviceRoot(hit.object) : null;
   if (!device) return;
-  draggingDevice = device;
-  setRoomHighlight(-1);
-  dragPlane.set(new THREE.Vector3(0, 1, 0), -device.position.y);
-  controls.enabled = false;
-  clearDeviceHover();
-  renderer.domElement.style.cursor = 'grabbing';
-  renderer.domElement.setPointerCapture(event.pointerId);
-  event.preventDefault();
-  event.stopImmediatePropagation();
+  beginObjectDrag(device, event);
 }, { capture: true });
 
 renderer.domElement.addEventListener('pointermove', (event) => {
@@ -2068,8 +2101,10 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     if (raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
       draggingDevice.position.x = THREE.MathUtils.clamp(dragPoint.x, -PLAN_WIDTH / 2, PLAN_WIDTH / 2);
       draggingDevice.position.z = THREE.MathUtils.clamp(dragPoint.z, -PLAN_DEPTH / 2, PLAN_DEPTH / 2);
-      updateDeviceBeacon(draggingDevice);
-      syncDeviceCard(draggingDevice);
+      if (!draggingDevice.userData.cctvId) {
+        updateDeviceBeacon(draggingDevice);
+        syncDeviceCard(draggingDevice);
+      }
     }
     renderer.domElement.style.cursor = 'grabbing';
     return;
@@ -2080,7 +2115,7 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     setRoomHighlight(-1);
     clearDeviceHover();
     clearRoomTooltip();
-    renderer.domElement.style.cursor = 'pointer';
+    renderer.domElement.style.cursor = deviceDragEnabled ? 'grab' : 'pointer';
     return;
   }
   const roomRegionId = updateRoomHighlight();
