@@ -11,7 +11,7 @@ const PLAN_DEPTH = SVG_HEIGHT * SCALE;
 const WALL_HEIGHT = 4.8;
 const WALL_THICKNESS = 0.22;
 const ROOM_GRID_SIZE = 4;
-const ROOM_HIGHLIGHT_COLOR = [255, 211, 64, 168];
+const ROOM_HIGHLIGHT_COLOR = [255, 228, 143, 92];
 
 // Structural diagonal walls that are represented in the source SVG by two
 // parallel outline polylines. They need a single solid wall on the centerline.
@@ -163,6 +163,7 @@ let sceneMode = 'building';
 
 const deviceObjects = new Map();
 const deviceTooltip = document.querySelector('#device-tooltip');
+const roomTooltip = document.querySelector('#room-tooltip');
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const dragPlane = new THREE.Plane();
@@ -543,10 +544,10 @@ function setRoomFallback(column, row, regionId) {
 }
 
 function updateRoomHighlight() {
-  if (!roomHoverState) return;
+  if (!roomHoverState) return -1;
   if (!raycaster.ray.intersectPlane(roomHoverPlane, dragPoint)) {
     setRoomHighlight(-1);
-    return;
+    return -1;
   }
   const svgX = (dragPoint.x + PLAN_WIDTH / 2) / SCALE;
   const svgY = (dragPoint.z + PLAN_DEPTH / 2) / SCALE;
@@ -554,7 +555,7 @@ function updateRoomHighlight() {
   const row = Math.floor(svgY / ROOM_GRID_SIZE);
   if (column < 0 || row < 0 || column >= roomHoverState.columns || row >= roomHoverState.rows) {
     setRoomHighlight(-1);
-    return;
+    return -1;
   }
   let regionId = roomHoverState.labels[row * roomHoverState.columns + column];
   let roomColumn = column;
@@ -585,6 +586,7 @@ function updateRoomHighlight() {
   }
   if (roomHoverState.regions[regionId]?.hoverable) setRoomHighlight(regionId);
   else setRoomFallback(roomColumn, roomRow, regionId);
+  return regionId;
 }
 
 function createWallInstances(segments) {
@@ -905,6 +907,24 @@ function updateDeviceTooltip(device, clientX, clientY) {
   deviceTooltip.style.left = `${Math.max(8, Math.min(clientX, innerWidth - 274))}px`;
   deviceTooltip.style.top = `${Math.max(8, Math.min(clientY, innerHeight - 205))}px`;
   deviceTooltip.classList.add('visible');
+}
+
+function updateRoomTooltip(regionId, clientX, clientY) {
+  if (regionId < 0) {
+    roomTooltip.classList.remove('visible');
+    return;
+  }
+  const temperature = 23.1 + ((regionId * 7) % 19) / 10;
+  const humidity = 48 + ((regionId * 11) % 14);
+  roomTooltip.querySelector('[data-field="temperature"]').textContent = `${temperature.toFixed(1)} °C`;
+  roomTooltip.querySelector('[data-field="humidity"]').textContent = `${humidity} %RH`;
+  roomTooltip.style.left = `${Math.max(8, Math.min(clientX, innerWidth - 230))}px`;
+  roomTooltip.style.top = `${Math.max(8, Math.min(clientY, innerHeight - 132))}px`;
+  roomTooltip.classList.add('visible');
+}
+
+function clearRoomTooltip() {
+  roomTooltip.classList.remove('visible');
 }
 
 function clearDeviceHover() {
@@ -1297,6 +1317,7 @@ function showBuildingOverview() {
   document.querySelector('#app').classList.add('building-mode');
   setDevicePanel(false);
   clearDeviceHover();
+  clearRoomTooltip();
   setRoomHighlight(-1);
   model.visible = false;
   buildingGroup.visible = true;
@@ -1390,6 +1411,7 @@ function enterPowerSave() {
   if (!powerSaveEnabled || powerSaveActive || sceneMode !== 'floor' || draggingDevice) return;
   powerSaveActive = true;
   clearDeviceHover();
+  clearRoomTooltip();
   setRoomHighlight(-1);
   controls.enabled = false;
   renderer.shadowMap.autoUpdate = false;
@@ -1533,11 +1555,13 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     if (floor14Object) floor14Object.scale.set(isFloor14 ? 1.025 : 1, isFloor14 ? 1.12 : 1, isFloor14 ? 1.025 : 1);
     renderer.domElement.style.cursor = isFloor14 ? 'pointer' : '';
     clearDeviceHover();
+    clearRoomTooltip();
     return;
   }
   if (!deviceObjects.size) return;
   if (draggingDevice) {
     setRoomHighlight(-1);
+    clearRoomTooltip();
     if (raycaster.ray.intersectPlane(dragPlane, dragPoint)) {
       draggingDevice.position.x = THREE.MathUtils.clamp(dragPoint.x, -PLAN_WIDTH / 2, PLAN_WIDTH / 2);
       draggingDevice.position.z = THREE.MathUtils.clamp(dragPoint.z, -PLAN_DEPTH / 2, PLAN_DEPTH / 2);
@@ -1547,14 +1571,17 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     renderer.domElement.style.cursor = 'grabbing';
     return;
   }
-  updateRoomHighlight();
+  const roomRegionId = updateRoomHighlight();
   const hit = raycaster.intersectObjects([...deviceObjects.values()], true)[0];
   const device = hit ? getDeviceRoot(hit.object) : null;
 
   if (!device) {
     clearDeviceHover();
+    updateRoomTooltip(roomRegionId, event.clientX, event.clientY);
     return;
   }
+
+  clearRoomTooltip();
 
   if (hoveredDevice !== device) {
     if (hoveredDevice) hoveredDevice.scale.setScalar(1);
@@ -1569,6 +1596,7 @@ renderer.domElement.addEventListener('pointerup', finishDeviceDrag);
 renderer.domElement.addEventListener('pointercancel', finishDeviceDrag);
 renderer.domElement.addEventListener('pointerleave', () => {
   clearDeviceHover();
+  clearRoomTooltip();
   setRoomHighlight(-1);
   if (floor14Object) floor14Object.scale.set(1, 1, 1);
   if (!draggingDevice) renderer.domElement.style.cursor = '';
