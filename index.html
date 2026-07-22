@@ -17,12 +17,26 @@
       <section id="building-overview" class="building-overview" aria-label="大樓樓層導覽">
         <span class="overview-eyebrow">BUILDING OVERVIEW</span>
         <h1>永彰科技大樓</h1>
-        <p>共 22 層樓，選擇樓層即可進入空間平面圖。</p>
+        <p>共 22 層樓，拖曳可 360° 旋轉，滾輪可拉近拉遠。</p>
         <button id="enter-14f" type="button">
           <span><strong>14F</strong><small>永彰科技辦公室</small></span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
         </button>
       </section>
+
+      <nav class="building-view-controls" aria-label="大樓 3D 檢視控制">
+        <button id="building-zoom-in" type="button" aria-label="拉近大樓" title="拉近">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M10.5 7.5v6M7.5 10.5h6"/></svg>
+        </button>
+        <button id="building-zoom-out" type="button" aria-label="拉遠大樓" title="拉遠">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21M7.5 10.5h6"/></svg>
+        </button>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="building-rotate" class="active" type="button" aria-label="360度自動旋轉" title="360° 自動旋轉" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.4 8.2A8 8 0 0 1 18.8 6M19.6 15.8A8 8 0 0 1 5.2 18"/><path d="M18.8 2.8V6h-3.2M5.2 21.2V18h3.2"/><path d="m12 8 3.5 2v4L12 16l-3.5-2v-4L12 8Z"/></svg>
+          <span>360°</span>
+        </button>
+      </nav>
 
       <nav class="toolbar" aria-label="View controls">
         <button id="back-building" type="button" aria-label="返回大樓總覽" title="返回大樓總覽">

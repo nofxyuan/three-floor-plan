@@ -233,10 +233,24 @@ let activeViewName = 'perspective';
 let pointerOverScene = renderer.domElement.matches(':hover');
 let autoRotateActive = false;
 let powerSaveActive = false;
+let buildingAutoRotateEnabled = true;
+let orbitInteractionActive = false;
 
 function updateAutoRotate() {
-  autoRotateActive = !powerSaveActive && (sceneMode === 'building' || activeViewName === 'perspective') && !pointerOverScene && !animation;
+  const rotateBuilding = sceneMode === 'building' && buildingAutoRotateEnabled && !orbitInteractionActive;
+  const rotateFloor = activeViewName === 'perspective' && !pointerOverScene;
+  autoRotateActive = !powerSaveActive && !animation && (rotateBuilding || rotateFloor);
 }
+
+controls.addEventListener('start', () => {
+  orbitInteractionActive = true;
+  updateAutoRotate();
+});
+
+controls.addEventListener('end', () => {
+  orbitInteractionActive = false;
+  updateAutoRotate();
+});
 
 window.addEventListener('pointerover', () => {
   pointerOverScene = true;
@@ -1809,6 +1823,24 @@ function showBuildingOverview() {
 
 document.querySelector('#enter-14f').addEventListener('click', enterFloorPlan);
 document.querySelector('#back-building').addEventListener('click', showBuildingOverview);
+
+function zoomBuilding(factor) {
+  if (sceneMode !== 'building') return;
+  const offset = camera.position.clone().sub(controls.target);
+  const distance = THREE.MathUtils.clamp(offset.length() * factor, controls.minDistance, controls.maxDistance);
+  camera.position.copy(controls.target).add(offset.normalize().multiplyScalar(distance));
+  controls.update();
+  markPowerActivity();
+}
+
+document.querySelector('#building-zoom-in').addEventListener('click', () => zoomBuilding(0.82));
+document.querySelector('#building-zoom-out').addEventListener('click', () => zoomBuilding(1.22));
+document.querySelector('#building-rotate').addEventListener('click', (event) => {
+  buildingAutoRotateEnabled = !buildingAutoRotateEnabled;
+  event.currentTarget.classList.toggle('active', buildingAutoRotateEnabled);
+  event.currentTarget.setAttribute('aria-pressed', String(buildingAutoRotateEnabled));
+  updateAutoRotate();
+});
 
 document.querySelector('#view-3d').addEventListener('click', () => {
   setActiveView('perspective');
