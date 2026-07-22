@@ -317,6 +317,34 @@ body { overscroll-behavior: none; }
 .meeting-state-picker button[data-meeting-status="reserved"][aria-pressed="true"] { color: #8a4e0b; background: rgba(243,154,50,.14); border-color: rgba(214,126,27,.42); }
 .meeting-state-picker button[data-meeting-status="occupied"][aria-pressed="true"] { color: #286f2c; background: rgba(76,175,80,.13); border-color: rgba(65,149,69,.4); }
 
+.asset-control-card { margin-bottom: 12px; padding: 14px; background: rgba(255,255,255,.62); border: 1px solid rgba(28,29,26,.08); border-radius: 14px; }
+.asset-control-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.asset-control-heading strong, .asset-control-heading small { display: block; }
+.asset-control-heading strong { font-size: 12px; font-weight: 700; }
+.asset-control-heading small { margin-top: 2px; color: #777970; font-size: 9px; }
+.asset-icon { position: relative; width: 22px; height: 22px; flex: 0 0 auto; }
+.bulb-icon::before { content: ""; position: absolute; top: 1px; left: 5px; width: 12px; height: 12px; border-radius: 50%; background: #ffd44d; box-shadow: 0 0 0 4px rgba(255,212,77,.16); }
+.bulb-icon::after { content: ""; position: absolute; left: 8px; bottom: 1px; width: 6px; height: 8px; border-radius: 2px; background: #8f8f88; }
+.camera-icon::before { content: ""; position: absolute; top: 5px; left: 1px; width: 15px; height: 12px; border-radius: 3px; background: #252724; }
+.camera-icon::after { content: ""; position: absolute; top: 8px; right: 0; width: 8px; height: 7px; clip-path: polygon(0 0,100% 20%,100% 80%,0 100%); background: #555851; }
+.asset-select { display: grid; grid-template-columns: 58px 1fr; align-items: center; gap: 8px; }
+.asset-select > span { color: #777970; font-size: 10px; }
+.asset-select select { min-width: 0; height: 35px; padding: 0 28px 0 9px; border: 1px solid rgba(25,26,23,.1); border-radius: 9px; outline: 0; color: #20211e; background: #f7f7f3; font: 600 10px/1 inherit; cursor: pointer; }
+.asset-select select:focus { border-color: #70736b; box-shadow: 0 0 0 3px rgba(70,73,67,.1); }
+.asset-state-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+.asset-state-picker button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 8px; border: 1px solid rgba(25,26,23,.1); border-radius: 9px; color: #64665f; background: #f7f7f3; font: 650 10px/1 inherit; cursor: pointer; transition: border-color .16s ease, background-color .16s ease, color .16s ease, transform .16s ease; }
+.asset-state-picker button:active { transform: scale(.97); }
+.asset-state-picker button i { width: 8px; height: 8px; border-radius: 50%; }
+.lighting-state-picker button[data-lighting-state="on"] i { background: #ffd33d; box-shadow: 0 0 0 3px rgba(255,211,61,.14); }
+.lighting-state-picker button[data-lighting-state="off"] i { background: #959790; }
+.lighting-state-picker button[data-lighting-state="on"][aria-pressed="true"] { color: #775b00; background: rgba(255,211,61,.18); border-color: rgba(211,166,17,.42); }
+.lighting-state-picker button[data-lighting-state="off"][aria-pressed="true"] { color: #555852; background: rgba(149,151,144,.18); border-color: rgba(119,121,115,.38); }
+.cctv-state-picker button[data-cctv-state="online"] i { background: #171916; }
+.cctv-state-picker button[data-cctv-state="offline"] i { background: #969992; }
+.cctv-state-picker button[data-cctv-state="online"][aria-pressed="true"] { color: #fff; background: #20221f; border-color: #20221f; }
+.cctv-state-picker button[data-cctv-state="offline"][aria-pressed="true"] { color: #555852; background: rgba(149,151,144,.18); border-color: rgba(119,121,115,.38); }
+.cctv-angle { margin-top: 10px; }
+
 .device-card { padding: 14px; background: rgba(255,255,255,.62); border: 1px solid rgba(28,29,26,.08); border-radius: 14px; }
 .device-card + .device-card { margin-top: 9px; }
 .device-card-title { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -357,6 +385,35 @@ body { overscroll-behavior: none; }
 .device-tooltip dl div { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .device-tooltip dt { color: rgba(245,245,241,.55); font-size: 10px; }
 .device-tooltip dd { margin: 0; color: #fff; font-size: 11px; font-weight: 550; text-align: right; }
+
+.cctv-modal { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; padding: 24px; background: rgba(13,15,13,.48); backdrop-filter: blur(10px); opacity: 0; visibility: hidden; transition: opacity .22s ease, visibility .22s ease; }
+.cctv-modal.open { opacity: 1; visibility: visible; }
+.cctv-dialog { width: min(760px, calc(100vw - 32px)); padding: 16px; color: #eef0eb; background: rgba(21,23,21,.96); border: 1px solid rgba(255,255,255,.12); border-radius: 20px; box-shadow: 0 28px 90px rgba(0,0,0,.38); transform: translateY(10px) scale(.98); transition: transform .22s ease; }
+.cctv-modal.open .cctv-dialog { transform: translateY(0) scale(1); }
+.cctv-dialog > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 2px 2px 14px; }
+.cctv-dialog > header > div { display: flex; align-items: center; gap: 10px; }
+.cctv-dialog header strong, .cctv-dialog header small { display: block; }
+.cctv-dialog header strong { font-size: 14px; font-weight: 700; }
+.cctv-dialog header small { margin-top: 2px; color: rgba(238,240,235,.58); font-size: 10px; }
+#cctv-live-dot { width: 9px; height: 9px; border-radius: 50%; background: #4de36a; box-shadow: 0 0 0 4px rgba(77,227,106,.14), 0 0 15px rgba(77,227,106,.55); }
+.cctv-modal.offline #cctv-live-dot { background: #8b8e87; box-shadow: 0 0 0 4px rgba(139,142,135,.14); }
+.cctv-dialog header button { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 10px; color: #d9dcd5; background: rgba(255,255,255,.08); cursor: pointer; }
+.cctv-dialog header button:hover { background: rgba(255,255,255,.14); }
+.cctv-dialog header svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; }
+.cctv-feed { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 14px; background: radial-gradient(circle at 65% 34%, rgba(143,160,142,.22), transparent 25%), linear-gradient(145deg, #263029, #121713 58%, #242b25); }
+.cctv-feed::before { content: ""; position: absolute; inset: 0; z-index: 2; background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,.025) 4px); pointer-events: none; }
+.cctv-feed-grid { position: absolute; inset: 0; opacity: .13; background-image: linear-gradient(rgba(197,225,199,.24) 1px, transparent 1px), linear-gradient(90deg, rgba(197,225,199,.24) 1px, transparent 1px); background-size: 54px 54px; transform: perspective(520px) rotateX(59deg) scale(1.55) translateY(25%); transform-origin: bottom; }
+.cctv-feed-mark { position: absolute; inset: 0; display: grid; place-items: center; opacity: .13; }
+.cctv-feed-mark svg { width: 110px; fill: none; stroke: #cce3cd; stroke-width: 2; }
+.cctv-feed-time, .cctv-channel { position: absolute; z-index: 3; top: 14px; color: rgba(236,243,234,.82); font: 600 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+.cctv-feed-time { right: 16px; }
+.cctv-channel { left: 16px; }
+.cctv-offline-message { position: absolute; inset: 0; z-index: 4; display: grid; place-content: center; text-align: center; background: rgba(19,20,19,.72); opacity: 0; visibility: hidden; }
+.cctv-offline-message strong { font-size: 20px; }
+.cctv-offline-message small { margin-top: 5px; color: rgba(238,240,235,.54); font-size: 10px; }
+.cctv-modal.offline .cctv-offline-message { opacity: 1; visibility: visible; }
+.cctv-dialog > footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 3px 1px; color: rgba(238,240,235,.65); font-size: 10px; }
+.cctv-dialog footer em { color: rgba(238,240,235,.36); font-style: normal; }
 
 .interaction-hint {
   position: fixed;
@@ -409,6 +466,9 @@ body { overscroll-behavior: none; }
   .power-save-badge { left: 16px; bottom: 16px; }
   .device-tooltip { width: 218px; }
   .room-tooltip { width: 166px; }
+  .cctv-modal { padding: 12px; }
+  .cctv-dialog { padding: 12px; border-radius: 16px; }
+  .cctv-dialog > footer { align-items: flex-start; flex-direction: column; gap: 4px; }
   .interaction-hint { bottom: 18px; }
   .building-overview { top: auto; bottom: 32px; left: 20px; transform: none; }
   .building-overview h1 { font-size: 32px; }
