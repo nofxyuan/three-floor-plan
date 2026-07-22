@@ -12,6 +12,10 @@ const WALL_HEIGHT = 4.8;
 const WALL_THICKNESS = 0.22;
 const ROOM_GRID_SIZE = 4;
 const ROOM_HIGHLIGHT_COLOR = [255, 228, 143, 92];
+const ROOM_HOVER_OVERRIDES = [
+  { id: '404', environmentId: 404, x1: 629, y1: 152.6, x2: 704.2, y2: 270.3 },
+  { id: '406', environmentId: 406, x1: 629, y1: 39.2, x2: 707.7, y2: 152.6 }
+];
 
 // Structural diagonal walls that are represented in the source SVG by two
 // parallel outline polylines. They need a single solid wall on the centerline.
@@ -543,6 +547,32 @@ function setRoomFallback(column, row, regionId) {
   texture.needsUpdate = true;
 }
 
+function setRoomOverride(room) {
+  if (!roomHoverState) return;
+  const key = `override:${room.id}`;
+  if (roomHoverState.currentKey === key) return;
+  const { columns, rows, context, imageData, texture } = roomHoverState;
+  roomHoverState.currentKey = key;
+  imageData.data.fill(0);
+
+  for (let row = 0; row < rows; row += 1) {
+    const svgY = (row + 0.5) * ROOM_GRID_SIZE;
+    if (svgY <= room.y1 || svgY >= room.y2) continue;
+    for (let column = 0; column < columns; column += 1) {
+      const svgX = (column + 0.5) * ROOM_GRID_SIZE;
+      if (svgX <= room.x1 || svgX >= room.x2) continue;
+      const offset = (row * columns + column) * 4;
+      imageData.data[offset] = ROOM_HIGHLIGHT_COLOR[0];
+      imageData.data[offset + 1] = ROOM_HIGHLIGHT_COLOR[1];
+      imageData.data[offset + 2] = ROOM_HIGHLIGHT_COLOR[2];
+      imageData.data[offset + 3] = ROOM_HIGHLIGHT_COLOR[3];
+    }
+  }
+
+  context.putImageData(imageData, 0, 0);
+  texture.needsUpdate = true;
+}
+
 function updateRoomHighlight() {
   if (!roomHoverState) return -1;
   if (!raycaster.ray.intersectPlane(roomHoverPlane, dragPoint)) {
@@ -551,6 +581,13 @@ function updateRoomHighlight() {
   }
   const svgX = (dragPoint.x + PLAN_WIDTH / 2) / SCALE;
   const svgY = (dragPoint.z + PLAN_DEPTH / 2) / SCALE;
+  const override = ROOM_HOVER_OVERRIDES.find((room) =>
+    svgX > room.x1 && svgX < room.x2 && svgY > room.y1 && svgY < room.y2
+  );
+  if (override) {
+    setRoomOverride(override);
+    return override.environmentId;
+  }
   const column = Math.floor(svgX / ROOM_GRID_SIZE);
   const row = Math.floor(svgY / ROOM_GRID_SIZE);
   if (column < 0 || row < 0 || column >= roomHoverState.columns || row >= roomHoverState.rows) {
