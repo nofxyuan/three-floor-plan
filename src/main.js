@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import './style.css';
 
-const SVG_URL = '/floor-plan.svg';
+const SVG_URL = `${import.meta.env.BASE_URL}floor-plan.svg`;
 const SVG_WIDTH = 1443;
 const SVG_HEIGHT = 812;
 const SCALE = 0.1;
