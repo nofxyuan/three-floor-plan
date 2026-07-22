@@ -89,9 +89,10 @@ controls.target.set(0, 0, 0);
 let activeViewName = 'perspective';
 let pointerOverScene = renderer.domElement.matches(':hover');
 let autoRotateActive = false;
+let powerSaveActive = false;
 
 function updateAutoRotate() {
-  autoRotateActive = (sceneMode === 'building' || activeViewName === 'perspective') && !pointerOverScene && !animation;
+  autoRotateActive = !powerSaveActive && (sceneMode === 'building' || activeViewName === 'perspective') && !pointerOverScene && !animation;
 }
 
 window.addEventListener('pointerover', () => {
@@ -1269,10 +1270,12 @@ function enterFloorPlan() {
   controls.minDistance = 35;
   controls.maxDistance = 280;
   renderer.domElement.style.cursor = '';
+  markPowerActivity();
 }
 
 function showBuildingOverview() {
   if (sceneMode === 'building') return;
+  exitPowerSave(false);
   sceneMode = 'building';
   document.querySelector('#app').classList.remove('floor-plan-mode');
   document.querySelector('#app').classList.add('building-mode');
@@ -1315,6 +1318,99 @@ updateAutoRotate();
 
 const devicePanel = document.querySelector('#device-panel');
 const deviceControlsButton = document.querySelector('#device-controls');
+const powerPanel = document.querySelector('#power-panel');
+const powerControlsButton = document.querySelector('#power-controls');
+const powerSaveToggle = document.querySelector('#power-save-toggle');
+const powerSaveMinutesInput = document.querySelector('#power-save-minutes');
+const powerStatusTitle = document.querySelector('#power-status-title');
+const powerStatusDetail = document.querySelector('#power-status-detail');
+const POWER_SAVE_ENABLED_KEY = 'three-floor-plan-power-save-enabled';
+const POWER_SAVE_MINUTES_KEY = 'three-floor-plan-power-save-minutes';
+let powerSaveEnabled = localStorage.getItem(POWER_SAVE_ENABLED_KEY) !== 'false';
+let powerSaveMinutes = THREE.MathUtils.clamp(Number(localStorage.getItem(POWER_SAVE_MINUTES_KEY)) || 3, 1, 60);
+let lastPowerActivity = Date.now();
+let lastActivityUpdate = 0;
+
+powerSaveToggle.checked = powerSaveEnabled;
+powerSaveMinutesInput.value = String(powerSaveMinutes);
+
+function setPowerPanel(open) {
+  powerPanel.classList.toggle('open', open);
+  powerControlsButton.classList.toggle('active', open);
+  powerControlsButton.setAttribute('aria-expanded', String(open));
+}
+
+function formatPowerCountdown(milliseconds) {
+  const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  if (minutes > 0) return `${minutes} 分 ${String(remainder).padStart(2, '0')} 秒後進入省電模式`;
+  return `${remainder} 秒後進入省電模式`;
+}
+
+function updatePowerStatus() {
+  document.querySelector('#app').classList.toggle('power-save-active', powerSaveActive);
+  powerControlsButton.classList.toggle('power-saving', powerSaveActive);
+  if (powerSaveActive) {
+    powerStatusTitle.textContent = '2D 省電中';
+    powerStatusDetail.textContent = '移動滑鼠即可恢復 3D';
+    return;
+  }
+  if (!powerSaveEnabled) {
+    powerStatusTitle.textContent = '省電模式已關閉';
+    powerStatusDetail.textContent = '開啟後可設定自動切換時間';
+    return;
+  }
+  if (sceneMode !== 'floor') {
+    powerStatusTitle.textContent = '等待進入 14F';
+    powerStatusDetail.textContent = '進入平面圖後開始計時';
+    return;
+  }
+  powerStatusTitle.textContent = '3D 運行中';
+  powerStatusDetail.textContent = formatPowerCountdown(powerSaveMinutes * 60000 - (Date.now() - lastPowerActivity));
+}
+
+function enterPowerSave() {
+  if (!powerSaveEnabled || powerSaveActive || sceneMode !== 'floor' || draggingDevice) return;
+  powerSaveActive = true;
+  clearDeviceHover();
+  setRoomHighlight(-1);
+  controls.enabled = false;
+  renderer.shadowMap.autoUpdate = false;
+  renderer.setPixelRatio(1);
+  renderer.setSize(innerWidth, innerHeight);
+  setActiveView('top');
+  moveCamera(cameraStates.top, 700);
+  updatePowerStatus();
+}
+
+function exitPowerSave(restore3D = true) {
+  if (!powerSaveActive) return;
+  powerSaveActive = false;
+  controls.enabled = true;
+  renderer.shadowMap.autoUpdate = true;
+  renderer.shadowMap.needsUpdate = true;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(innerWidth, innerHeight);
+  lastPowerActivity = Date.now();
+  if (restore3D && sceneMode === 'floor') {
+    setActiveView('perspective');
+    moveCamera(cameraStates.perspective, 700);
+  }
+  updatePowerStatus();
+}
+
+function markPowerActivity() {
+  const now = Date.now();
+  if (powerSaveActive) {
+    exitPowerSave(true);
+    return;
+  }
+  if (now - lastActivityUpdate < 500) return;
+  lastActivityUpdate = now;
+  lastPowerActivity = now;
+  updatePowerStatus();
+}
 
 function setDevicePanel(open) {
   devicePanel.classList.toggle('open', open);
@@ -1322,8 +1418,53 @@ function setDevicePanel(open) {
   deviceControlsButton.setAttribute('aria-expanded', String(open));
 }
 
-deviceControlsButton.addEventListener('click', () => setDevicePanel(!devicePanel.classList.contains('open')));
+deviceControlsButton.addEventListener('click', () => {
+  setPowerPanel(false);
+  setDevicePanel(!devicePanel.classList.contains('open'));
+});
 document.querySelector('#close-device-panel').addEventListener('click', () => setDevicePanel(false));
+powerControlsButton.addEventListener('click', () => {
+  setDevicePanel(false);
+  setPowerPanel(!powerPanel.classList.contains('open'));
+});
+document.querySelector('#close-power-panel').addEventListener('click', () => setPowerPanel(false));
+
+powerSaveToggle.addEventListener('change', () => {
+  powerSaveEnabled = powerSaveToggle.checked;
+  localStorage.setItem(POWER_SAVE_ENABLED_KEY, String(powerSaveEnabled));
+  lastPowerActivity = Date.now();
+  if (!powerSaveEnabled) exitPowerSave(true);
+  updatePowerStatus();
+});
+
+function applyPowerSaveMinutes(normalize = false) {
+  const inputMinutes = Number(powerSaveMinutesInput.value);
+  if (!Number.isFinite(inputMinutes) || inputMinutes < 1) {
+    if (normalize) powerSaveMinutesInput.value = String(powerSaveMinutes);
+    return;
+  }
+  powerSaveMinutes = THREE.MathUtils.clamp(Math.round(inputMinutes), 1, 60);
+  if (normalize) powerSaveMinutesInput.value = String(powerSaveMinutes);
+  localStorage.setItem(POWER_SAVE_MINUTES_KEY, String(powerSaveMinutes));
+  lastPowerActivity = Date.now();
+  updatePowerStatus();
+}
+
+powerSaveMinutesInput.addEventListener('input', () => applyPowerSaveMinutes(false));
+powerSaveMinutesInput.addEventListener('change', () => applyPowerSaveMinutes(true));
+
+['pointermove', 'pointerdown', 'wheel', 'keydown', 'touchstart'].forEach((eventName) => {
+  window.addEventListener(eventName, markPowerActivity, { passive: true });
+});
+
+setInterval(() => {
+  if (powerSaveEnabled && !powerSaveActive && sceneMode === 'floor' && Date.now() - lastPowerActivity >= powerSaveMinutes * 60000) {
+    enterPowerSave();
+  }
+  updatePowerStatus();
+}, 1000);
+
+updatePowerStatus();
 
 document.querySelector('#add-device').addEventListener('click', () => {
   addDevice(document.querySelector('#new-device-type').value);
@@ -1453,11 +1594,14 @@ async function init() {
 const AUTO_ROTATE_AXIS = new THREE.Vector3(0, 1, 0);
 const AUTO_ROTATE_SPEED = THREE.MathUtils.degToRad(3.6);
 let previousFrameTime = performance.now();
+let lastPowerSaveRender = 0;
 
 function animate(now) {
   requestAnimationFrame(animate);
   const deltaSeconds = Math.min((now - previousFrameTime) / 1000, 0.05);
   previousFrameTime = now;
+  if (powerSaveActive && !animation && now - lastPowerSaveRender < 1000) return;
+  if (powerSaveActive) lastPowerSaveRender = now;
   updateCameraAnimation(now);
   if (autoRotateActive) {
     const offset = camera.position.clone().sub(controls.target);
