@@ -105,6 +105,60 @@
           </div>
         </section>
 
+        <section class="asset-control-card lighting-control" aria-label="照明控制">
+          <div class="asset-control-heading">
+            <span class="asset-icon bulb-icon" aria-hidden="true"></span>
+            <div><strong>照明控制</strong><small>18 個燈泡裝置</small></div>
+          </div>
+          <label class="asset-select" for="lighting-select">
+            <span>燈具</span>
+            <select id="lighting-select">
+              <option value="light-01">照明 01</option><option value="light-02">照明 02</option>
+              <option value="light-03">照明 03</option><option value="light-04">照明 04</option>
+              <option value="light-05">照明 05</option><option value="light-06">照明 06</option>
+              <option value="light-07">照明 07</option><option value="light-08">照明 08</option>
+              <option value="light-09">照明 09</option><option value="light-10">照明 10</option>
+              <option value="light-11">照明 11</option><option value="light-12">照明 12</option>
+              <option value="light-13">照明 13</option><option value="light-14">照明 14</option>
+              <option value="light-15">照明 15</option><option value="light-16">照明 16</option>
+              <option value="light-17">照明 17</option><option value="light-18">照明 18</option>
+            </select>
+          </label>
+          <div class="asset-state-picker lighting-state-picker" role="group" aria-label="照明狀態">
+            <button data-lighting-state="on" type="button" aria-pressed="true"><i></i>開啟</button>
+            <button data-lighting-state="off" type="button" aria-pressed="false"><i></i>關閉</button>
+          </div>
+        </section>
+
+        <section class="asset-control-card cctv-control" aria-label="CCTV 控制">
+          <div class="asset-control-heading">
+            <span class="asset-icon camera-icon" aria-hidden="true"></span>
+            <div><strong>CCTV 控制</strong><small>7 支攝影機・點選模型可連線</small></div>
+          </div>
+          <label class="asset-select" for="cctv-select">
+            <span>攝影機</span>
+            <select id="cctv-select">
+              <option value="cctv-01">CCTV 01</option><option value="cctv-02">CCTV 02</option>
+              <option value="cctv-03">CCTV 03</option><option value="cctv-04">CCTV 04</option>
+              <option value="cctv-05">CCTV 05</option><option value="cctv-06">CCTV 06</option>
+              <option value="cctv-07">CCTV 07</option>
+            </select>
+          </label>
+          <div class="asset-state-picker cctv-state-picker" role="group" aria-label="CCTV 連線狀態">
+            <button data-cctv-state="online" type="button" aria-pressed="true"><i></i>在線</button>
+            <button data-cctv-state="offline" type="button" aria-pressed="false"><i></i>離線</button>
+          </div>
+          <label class="asset-select cctv-angle" for="cctv-angle-select">
+            <span>方向</span>
+            <select id="cctv-angle-select">
+              <option value="n">北・0°</option><option value="ne">東北・45°</option>
+              <option value="e">東・90°</option><option value="se">東南・135°</option>
+              <option value="s">南・180°</option><option value="sw">西南・225°</option>
+              <option value="w">西・270°</option><option value="nw">西北・315°</option>
+            </select>
+          </label>
+        </section>
+
         <section class="device-card" data-device="air-conditioner">
           <div class="device-card-title">
             <span class="device-dot ac-dot"></span>
@@ -201,6 +255,27 @@
           <div><dt>狀態</dt><dd data-field="status"></dd></div>
           <div><dt>歸屬閘道器</dt><dd data-field="gateway"></dd></div>
         </dl>
+      </div>
+
+      <div id="cctv-modal" class="cctv-modal" aria-hidden="true">
+        <section class="cctv-dialog" role="dialog" aria-modal="true" aria-labelledby="cctv-modal-title">
+          <header>
+            <div><span id="cctv-live-dot"></span><div><strong id="cctv-modal-title">CCTV 01</strong><small id="cctv-modal-status">正在連線</small></div></div>
+            <button id="close-cctv-modal" type="button" aria-label="關閉 CCTV 連線畫面">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+            </button>
+          </header>
+          <div class="cctv-feed">
+            <div class="cctv-feed-grid" aria-hidden="true"></div>
+            <div class="cctv-feed-mark" aria-hidden="true">
+              <svg viewBox="0 0 64 64"><path d="M12 21h28a7 7 0 0 1 7 7v12a7 7 0 0 1-7 7H12z"/><circle cx="37" cy="34" r="7"/><path d="m47 29 10-6v22l-10-6z"/></svg>
+            </div>
+            <div id="cctv-offline-message" class="cctv-offline-message"><strong>訊號中斷</strong><small>請確認攝影機連線狀態</small></div>
+            <span id="cctv-feed-time" class="cctv-feed-time"></span>
+            <span class="cctv-channel">14F SECURITY</span>
+          </div>
+          <footer><span id="cctv-direction-label">方向：東・90°</span><em>點選空白處或 ESC 關閉</em></footer>
+        </section>
       </div>
 
       <div id="loading" role="status" aria-live="polite">

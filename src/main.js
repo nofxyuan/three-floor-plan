@@ -33,6 +33,27 @@ const MEETING_ROOMS = [
   { id: '405', name: '405-Sky Room', x1: 852.9, y1: 268, x2: 1055.8, y2: 344.5 },
   { id: '406', name: '406-Autumn Room', x1: 629, y1: 39.2, x2: 707.7, y2: 152.6 }
 ];
+const LIGHTING_STORAGE_KEY = 'three-floor-plan-lighting-states';
+const CCTV_STORAGE_KEY = 'three-floor-plan-cctv-states';
+const CCTV_DIRECTIONS = {
+  n: { label: '北', degrees: 0 },
+  ne: { label: '東北', degrees: 45 },
+  e: { label: '東', degrees: 90 },
+  se: { label: '東南', degrees: 135 },
+  s: { label: '南', degrees: 180 },
+  sw: { label: '西南', degrees: 225 },
+  w: { label: '西', degrees: 270 },
+  nw: { label: '西北', degrees: 315 }
+};
+const LIGHTING_FIXTURES = [
+  [286, 143], [470, 112], [660, 112], [790, 112], [930, 170], [1120, 305],
+  [1240, 405], [1120, 475], [930, 550], [1030, 665], [820, 660], [610, 620],
+  [390, 650], [270, 560], [330, 390], [520, 340], [720, 335], [920, 395]
+].map(([svgX, svgY], index) => ({ id: `light-${String(index + 1).padStart(2, '0')}`, label: `照明 ${String(index + 1).padStart(2, '0')}`, svgX, svgY }));
+const CCTV_FIXTURES = [
+  [560, 130, 'e'], [850, 120, 's'], [1040, 275, 'w'], [1180, 500, 'nw'],
+  [900, 610, 'n'], [520, 520, 'se'], [300, 320, 'ne']
+].map(([svgX, svgY, direction], index) => ({ id: `cctv-${String(index + 1).padStart(2, '0')}`, label: `CCTV ${String(index + 1).padStart(2, '0')}`, svgX, svgY, direction }));
 
 // Structural diagonal walls that are represented in the source SVG by two
 // parallel outline polylines. They need a single solid wall on the centerline.
@@ -122,6 +143,48 @@ function saveMeetingRoomStates() {
 
 const meetingRoomStates = readMeetingRoomStates();
 
+function readLightingStates() {
+  const defaults = Object.fromEntries(LIGHTING_FIXTURES.map((fixture, index) => [fixture.id, { on: index < 14 }]));
+  try {
+    const saved = JSON.parse(readLocalSetting(LIGHTING_STORAGE_KEY, '{}'));
+    LIGHTING_FIXTURES.forEach((fixture) => {
+      if (typeof saved?.[fixture.id]?.on === 'boolean') defaults[fixture.id] = { on: saved[fixture.id].on };
+    });
+  } catch {
+    // Keep lighting defaults when saved settings are unavailable.
+  }
+  return defaults;
+}
+
+function readCctvStates() {
+  const defaults = Object.fromEntries(CCTV_FIXTURES.map((fixture, index) => [fixture.id, {
+    online: index < 6,
+    direction: fixture.direction
+  }]));
+  try {
+    const saved = JSON.parse(readLocalSetting(CCTV_STORAGE_KEY, '{}'));
+    CCTV_FIXTURES.forEach((fixture) => {
+      const entry = saved?.[fixture.id];
+      if (!entry || typeof entry.online !== 'boolean' || !CCTV_DIRECTIONS[entry.direction]) return;
+      defaults[fixture.id] = { online: entry.online, direction: entry.direction };
+    });
+  } catch {
+    // Keep CCTV defaults when saved settings are unavailable.
+  }
+  return defaults;
+}
+
+const lightingStates = readLightingStates();
+const cctvStates = readCctvStates();
+
+function saveLightingStates() {
+  writeLocalSetting(LIGHTING_STORAGE_KEY, JSON.stringify(lightingStates));
+}
+
+function saveCctvStates() {
+  writeLocalSetting(CCTV_STORAGE_KEY, JSON.stringify(cctvStates));
+}
+
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xe8e8e3);
 scene.fog = new THREE.FogExp2(0xe8e8e3, 0.0042);
@@ -208,8 +271,15 @@ let sceneMode = 'building';
 
 const deviceObjects = new Map();
 const meetingRoomVisuals = new Map();
+const lightingObjects = new Map();
+const cctvObjects = new Map();
 const deviceTooltip = document.querySelector('#device-tooltip');
 const roomTooltip = document.querySelector('#room-tooltip');
+const cctvModal = document.querySelector('#cctv-modal');
+const cctvModalTitle = document.querySelector('#cctv-modal-title');
+const cctvModalStatus = document.querySelector('#cctv-modal-status');
+const cctvDirectionLabel = document.querySelector('#cctv-direction-label');
+const cctvFeedTime = document.querySelector('#cctv-feed-time');
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const dragPlane = new THREE.Plane();
@@ -897,6 +967,140 @@ function createTemperatureSensor() {
   return group;
 }
 
+function createLightBulb() {
+  const group = new THREE.Group();
+  const socket = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.28, 0.34, 0.52, 16),
+    new THREE.MeshStandardMaterial({ color: 0x73766f, roughness: 0.5, metalness: 0.28 })
+  );
+  socket.position.y = 0.38;
+  group.add(socket);
+
+  const neck = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2, 0.26, 0.28, 16),
+    new THREE.MeshStandardMaterial({ color: 0xb4b6ae, roughness: 0.42, metalness: 0.18 })
+  );
+  neck.position.y = 0.02;
+  group.add(neck);
+
+  const bulbMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffdc5d,
+    emissive: 0xffc52e,
+    emissiveIntensity: 2.1,
+    roughness: 0.22,
+    transparent: true,
+    opacity: 0.96
+  });
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.48, 22, 18), bulbMaterial);
+  bulb.scale.y = 1.08;
+  bulb.position.y = -0.43;
+  bulb.castShadow = false;
+  group.add(bulb);
+
+  const glowMaterial = new THREE.SpriteMaterial({
+    map: getAlertAuraTexture(),
+    color: 0xffcf3f,
+    transparent: true,
+    opacity: 0.58,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  });
+  const glow = new THREE.Sprite(glowMaterial);
+  glow.position.y = -0.4;
+  glow.scale.set(3.7, 3.7, 1);
+  glow.renderOrder = 3;
+  group.add(glow);
+  group.userData = { bulbMaterial, glow, glowMaterial };
+  return group;
+}
+
+function updateLightingObject(lightId) {
+  const object = lightingObjects.get(lightId);
+  const state = lightingStates[lightId];
+  if (!object || !state) return;
+  object.userData.bulbMaterial.color.setHex(state.on ? 0xffdc5d : 0x92958e);
+  object.userData.bulbMaterial.emissive.setHex(state.on ? 0xffc52e : 0x000000);
+  object.userData.bulbMaterial.emissiveIntensity = state.on ? 2.1 : 0;
+  object.userData.glow.visible = state.on;
+}
+
+function createLightingFixtures() {
+  LIGHTING_FIXTURES.forEach((fixture) => {
+    const object = createLightBulb();
+    const position = svgPointToWorld(fixture.svgX, fixture.svgY);
+    object.position.set(position.x, 5.65, position.z);
+    object.scale.setScalar(0.92);
+    object.userData.lightId = fixture.id;
+    object.userData.label = fixture.label;
+    lightingObjects.set(fixture.id, object);
+    model.add(object);
+    updateLightingObject(fixture.id);
+  });
+}
+
+function createCctvCamera() {
+  const group = new THREE.Group();
+  const mountMaterial = new THREE.MeshStandardMaterial({ color: 0xb9bbb5, roughness: 0.5, metalness: 0.18 });
+  const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x1c1e1b, roughness: 0.38, metalness: 0.18 });
+  const lensMaterial = new THREE.MeshStandardMaterial({ color: 0x080908, roughness: 0.16, metalness: 0.55 });
+
+  const mount = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.62, 14), mountMaterial);
+  mount.position.y = 0.55;
+  group.add(mount);
+
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.24, 0.82), mountMaterial);
+  arm.position.set(0, 0.22, 0.34);
+  arm.rotation.x = -0.18;
+  group.add(arm);
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.72, 1.7), bodyMaterial);
+  body.position.set(0, -0.08, 1.05);
+  body.rotation.x = -0.12;
+  body.castShadow = true;
+  group.add(body);
+
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(1.42, 0.14, 1.82), bodyMaterial.clone());
+  hood.position.set(0, 0.35, 1.02);
+  hood.rotation.x = -0.12;
+  group.add(hood);
+
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.32, 0.28, 22), lensMaterial);
+  lens.rotation.x = Math.PI / 2;
+  lens.position.set(0, -0.13, 1.94);
+  group.add(lens);
+
+  const indicatorMaterial = new THREE.MeshBasicMaterial({ color: 0x45dd63 });
+  const indicator = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), indicatorMaterial);
+  indicator.position.set(0.42, 0.02, 1.92);
+  group.add(indicator);
+  group.userData = { bodyMaterials: [bodyMaterial, hood.material], indicatorMaterial };
+  return group;
+}
+
+function updateCctvObject(cctvId) {
+  const object = cctvObjects.get(cctvId);
+  const state = cctvStates[cctvId];
+  if (!object || !state) return;
+  const color = state.online ? 0x1c1e1b : 0x8d9089;
+  object.userData.bodyMaterials.forEach((material) => material.color.setHex(color));
+  object.userData.indicatorMaterial.color.setHex(state.online ? 0x45dd63 : 0x9a9d96);
+  object.rotation.y = -THREE.MathUtils.degToRad(CCTV_DIRECTIONS[state.direction].degrees);
+}
+
+function createCctvFixtures() {
+  CCTV_FIXTURES.forEach((fixture) => {
+    const object = createCctvCamera();
+    const position = svgPointToWorld(fixture.svgX, fixture.svgY);
+    object.position.set(position.x, 5.15, position.z);
+    object.scale.setScalar(0.88);
+    object.userData.cctvId = fixture.id;
+    object.userData.label = fixture.label;
+    cctvObjects.set(fixture.id, object);
+    model.add(object);
+    updateCctvObject(fixture.id);
+  });
+}
+
 function readSavedDevicePositions() {
   try {
     return JSON.parse(readLocalSetting(DEVICE_STORAGE_KEY, '{}'));
@@ -952,6 +1156,39 @@ function getDeviceRoot(object) {
   let current = object;
   while (current && !current.userData.deviceId) current = current.parent;
   return current?.userData.deviceId ? current : null;
+}
+
+function getCctvRoot(object) {
+  let current = object;
+  while (current && !current.userData.cctvId) current = current.parent;
+  return current?.userData.cctvId ? current : null;
+}
+
+function updateCctvFeedClock() {
+  cctvFeedTime.textContent = new Intl.DateTimeFormat('zh-TW', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  }).format(new Date());
+}
+
+function openCctvConnection(cctvId) {
+  const fixture = CCTV_FIXTURES.find((entry) => entry.id === cctvId);
+  const state = cctvStates[cctvId];
+  if (!fixture || !state) return;
+  const direction = CCTV_DIRECTIONS[state.direction];
+  cctvModalTitle.textContent = fixture.label;
+  cctvModalStatus.textContent = state.online ? 'LIVE・連線成功' : 'OFFLINE・無法連線';
+  cctvDirectionLabel.textContent = `方向：${direction.label}・${direction.degrees}°`;
+  cctvModal.classList.toggle('offline', !state.online);
+  cctvModal.classList.add('open');
+  cctvModal.setAttribute('aria-hidden', 'false');
+  updateCctvFeedClock();
+  document.querySelector('#close-cctv-modal').focus();
+}
+
+function closeCctvConnection() {
+  cctvModal.classList.remove('open');
+  cctvModal.setAttribute('aria-hidden', 'true');
 }
 
 function setPointerFromEvent(event) {
@@ -1474,6 +1711,7 @@ function enterFloorPlan() {
 function showBuildingOverview() {
   if (sceneMode === 'building') return;
   exitPowerSave(false);
+  closeCctvConnection();
   sceneMode = 'building';
   document.querySelector('#app').classList.remove('floor-plan-mode');
   document.querySelector('#app').classList.add('building-mode');
@@ -1520,6 +1758,11 @@ const deviceControlsButton = document.querySelector('#device-controls');
 const meetingRoomSelect = document.querySelector('#meeting-room-select');
 const meetingStatusToggle = document.querySelector('#meeting-status-toggle');
 const meetingStatusButtons = [...document.querySelectorAll('[data-meeting-status]')];
+const lightingSelect = document.querySelector('#lighting-select');
+const lightingStateButtons = [...document.querySelectorAll('[data-lighting-state]')];
+const cctvSelect = document.querySelector('#cctv-select');
+const cctvStateButtons = [...document.querySelectorAll('[data-cctv-state]')];
+const cctvAngleSelect = document.querySelector('#cctv-angle-select');
 const powerPanel = document.querySelector('#power-panel');
 const powerControlsButton = document.querySelector('#power-controls');
 const powerSaveToggle = document.querySelector('#power-save-toggle');
@@ -1560,6 +1803,61 @@ meetingStatusButtons.forEach((button) => {
   });
 });
 syncMeetingRoomControls();
+
+function syncLightingControls() {
+  const state = lightingStates[lightingSelect.value];
+  if (!state) return;
+  lightingStateButtons.forEach((button) => {
+    button.setAttribute('aria-pressed', String((button.dataset.lightingState === 'on') === state.on));
+  });
+}
+
+lightingSelect.addEventListener('change', syncLightingControls);
+lightingStateButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const lightId = lightingSelect.value;
+    lightingStates[lightId].on = button.dataset.lightingState === 'on';
+    updateLightingObject(lightId);
+    saveLightingStates();
+    syncLightingControls();
+  });
+});
+syncLightingControls();
+
+function syncCctvControls() {
+  const state = cctvStates[cctvSelect.value];
+  if (!state) return;
+  cctvStateButtons.forEach((button) => {
+    button.setAttribute('aria-pressed', String((button.dataset.cctvState === 'online') === state.online));
+  });
+  cctvAngleSelect.value = state.direction;
+}
+
+cctvSelect.addEventListener('change', syncCctvControls);
+cctvStateButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const cctvId = cctvSelect.value;
+    cctvStates[cctvId].online = button.dataset.cctvState === 'online';
+    updateCctvObject(cctvId);
+    saveCctvStates();
+    syncCctvControls();
+  });
+});
+cctvAngleSelect.addEventListener('change', () => {
+  const cctvId = cctvSelect.value;
+  cctvStates[cctvId].direction = cctvAngleSelect.value;
+  updateCctvObject(cctvId);
+  saveCctvStates();
+});
+syncCctvControls();
+
+document.querySelector('#close-cctv-modal').addEventListener('click', closeCctvConnection);
+cctvModal.addEventListener('pointerdown', (event) => {
+  if (event.target === cctvModal) closeCctvConnection();
+});
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && cctvModal.classList.contains('open')) closeCctvConnection();
+});
 
 powerSaveToggle.checked = powerSaveEnabled;
 powerSaveMinutesInput.value = String(powerSaveMinutes);
@@ -1603,6 +1901,7 @@ function updatePowerStatus() {
 function enterPowerSave() {
   if (!powerSaveEnabled || powerSaveActive || sceneMode !== 'floor' || draggingDevice) return;
   powerSaveActive = true;
+  closeCctvConnection();
   clearDeviceHover();
   clearRoomTooltip();
   setRoomHighlight(-1);
@@ -1719,6 +2018,17 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
     }
     return;
   }
+  if (sceneMode === 'floor' && event.button === 0) {
+    setPointerFromEvent(event);
+    const cctvHit = raycaster.intersectObjects([...cctvObjects.values()], true)[0];
+    const cctv = cctvHit ? getCctvRoot(cctvHit.object) : null;
+    if (cctv) {
+      openCctvConnection(cctv.userData.cctvId);
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return;
+    }
+  }
   if (!deviceDragEnabled || event.button !== 0) return;
   setPointerFromEvent(event);
   const hit = raycaster.intersectObjects([...deviceObjects.values()], true)[0];
@@ -1762,6 +2072,15 @@ renderer.domElement.addEventListener('pointermove', (event) => {
       syncDeviceCard(draggingDevice);
     }
     renderer.domElement.style.cursor = 'grabbing';
+    return;
+  }
+  const cctvHit = raycaster.intersectObjects([...cctvObjects.values()], true)[0];
+  const cctv = cctvHit ? getCctvRoot(cctvHit.object) : null;
+  if (cctv) {
+    setRoomHighlight(-1);
+    clearDeviceHover();
+    clearRoomTooltip();
+    renderer.domElement.style.cursor = 'pointer';
     return;
   }
   const roomRegionId = updateRoomHighlight();
@@ -1821,6 +2140,8 @@ async function init() {
     createRoomHoverMap(wallSegments);
     createColumns(svg);
     createMeetingRoomStatusVisuals();
+    createLightingFixtures();
+    createCctvFixtures();
     createDevices();
     requestAnimationFrame(() => loading.classList.add('hidden'));
   } catch (error) {
