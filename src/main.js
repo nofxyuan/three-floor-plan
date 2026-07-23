@@ -91,6 +91,71 @@ const DEVICE_CONFIGS = [
   }
 ];
 
+const REGIONAL_DEVICE_AREAS = [
+  { id: 'general-manager', name: '總經理室', svgX: 310, svgY: 137, existing: ['ac'] },
+  { id: 'meeting-403', name: '403 會議室', svgX: 480, svgY: 220 },
+  { id: 'meeting-402', name: '402 會議室', svgX: 770, svgY: 100 },
+  { id: 'meeting-406', name: '406 會議室', svgX: 670, svgY: 72 },
+  { id: 'staff-break', name: '員工休息區', svgX: 560, svgY: 205 },
+  { id: 'meeting-404', name: '404 會議室', svgX: 665, svgY: 220 },
+  { id: 'meeting-401', name: '401 會議室', svgX: 770, svgY: 235 },
+  { id: 'meeting-405', name: '405 會議室', svgX: 925, svgY: 315 },
+  { id: 'lobby-display', name: '大廳展示區', svgX: 650, svgY: 350 },
+  { id: 'expanded-manager', name: '擴編主管室', svgX: 1135, svgY: 320, existing: ['sensor'] },
+  { id: 'heat-pipe-north', name: '熱管事業北區', svgX: 330, svgY: 400 },
+  { id: 'heat-pipe-south', name: '熱管事業南區', svgX: 330, svgY: 570 },
+  { id: 'smart-living', name: '智慧生活事業', svgX: 1080, svgY: 480 },
+  { id: 'lab-heat', name: '實驗室熱管理', svgX: 530, svgY: 700 },
+  { id: 'lab-smart', name: '實驗室智慧生活', svgX: 900, svgY: 700 },
+  { id: 'reception', name: '收發室', svgX: 540, svgY: 415 }
+];
+
+const REGIONAL_DEVICE_CONFIGS = REGIONAL_DEVICE_AREAS.flatMap((area, areaIndex) => {
+  const gateway = `14F-GW-${String((areaIndex % 4) + 1).padStart(2, '0')}`;
+  const configs = [];
+  if (!area.existing?.includes('ac')) {
+    configs.push({
+      id: `regional-${area.id}-ac`,
+      svgX: area.svgX - 12,
+      svgY: area.svgY - 7,
+      y: 5.25,
+      type: 'ac',
+      compact: true,
+      showCard: false,
+      color: 'green',
+      label: `${area.name}冷氣`,
+      location: `${area.name}・區域設備`,
+      data: {
+        name: `${area.name}冷氣`,
+        energy: `${(6.2 + (areaIndex % 5) * 0.8).toFixed(1)} kWh`,
+        runtime: `${4 + (areaIndex % 6)} 小時 ${12 + (areaIndex * 7) % 47} 分鐘`,
+        gateway
+      }
+    });
+  }
+  if (!area.existing?.includes('sensor')) {
+    configs.push({
+      id: `regional-${area.id}-sensor`,
+      svgX: area.svgX + 12,
+      svgY: area.svgY + 7,
+      y: 2.35,
+      type: 'sensor',
+      compact: true,
+      showCard: false,
+      color: 'green',
+      label: `${area.name}溫濕度感應器`,
+      location: `${area.name}・區域設備`,
+      data: {
+        name: `${area.name}溫濕度感應器`,
+        energy: '0.03 kWh',
+        runtime: `${12 + areaIndex} 天 ${areaIndex % 9} 小時`,
+        gateway
+      }
+    });
+  }
+  return configs;
+});
+
 const ADDED_DEVICE_PRESETS = {
   'ac-02': {
     type: 'ac', y: 7.2, color: 'green', label: '冷氣02', location: '畫面中央',
@@ -1059,6 +1124,51 @@ function createTemperatureSensor() {
   return group;
 }
 
+function createCompactRegionalDevice(type) {
+  const group = new THREE.Group();
+  if (type === 'ac') {
+    const shell = new THREE.Mesh(
+      new THREE.BoxGeometry(2.45, 0.82, 0.68),
+      new THREE.MeshStandardMaterial({ color: 0xf4f6f4, roughness: 0.34, metalness: 0.04 })
+    );
+    shell.castShadow = true;
+    group.add(shell);
+    const outlet = new THREE.Mesh(
+      new THREE.BoxGeometry(2.05, 0.12, 0.7),
+      new THREE.MeshStandardMaterial({ color: 0x9eb7b9, roughness: 0.48 })
+    );
+    outlet.position.set(0, -0.29, 0.18);
+    group.add(outlet);
+  } else {
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.82, 1.04, 0.36),
+      new THREE.MeshStandardMaterial({ color: 0xf3f0e9, roughness: 0.42, metalness: 0.02 })
+    );
+    body.castShadow = true;
+    group.add(body);
+    const face = new THREE.Mesh(
+      new THREE.CircleGeometry(0.24, 18),
+      new THREE.MeshStandardMaterial({ color: 0x39504c, roughness: 0.34 })
+    );
+    face.position.z = 0.19;
+    group.add(face);
+  }
+
+  const beacon = createDeviceBeacon(type === 'ac' ? 0x47a6b8 : 0xee8a3b, type === 'ac' ? 0.78 : 0.56);
+  group.userData.beacon = beacon;
+  group.add(beacon);
+  const aura = createAlertAura(type === 'ac' ? 4.2 : 2.8, type === 'ac' ? 3.2 : 2.8);
+  aura.position.z = -0.22;
+  group.userData.alertAura = aura;
+  group.add(aura);
+  const alertLight = createAlertLight();
+  alertLight.distance = type === 'ac' ? 9 : 6;
+  group.userData.alertLight = alertLight;
+  group.add(alertLight);
+  group.userData.colorMaterials = collectDeviceColorMaterials(group);
+  return group;
+}
+
 function createLightBulb() {
   const group = new THREE.Group();
   const socket = new THREE.Mesh(
@@ -1380,7 +1490,7 @@ function clearRoomTooltip() {
 }
 
 function clearDeviceHover() {
-  if (hoveredDevice) hoveredDevice.scale.setScalar(1);
+  if (hoveredDevice) hoveredDevice.scale.setScalar(hoveredDevice.userData.baseScale || 1);
   hoveredDevice = null;
   renderer.domElement.style.cursor = '';
   deviceTooltip.classList.remove('visible');
@@ -1500,12 +1610,18 @@ function bindDeviceCard(card, device) {
 }
 
 function createDeviceObject(config, savedPositions) {
-  const device = config.type === 'ac' ? createAirConditioner() : createTemperatureSensor();
+  const device = config.compact
+    ? createCompactRegionalDevice(config.type)
+    : config.type === 'ac'
+      ? createAirConditioner()
+      : createTemperatureSensor();
   const planPosition = Number.isFinite(config.svgX) && Number.isFinite(config.svgY)
     ? svgPointToWorld(config.svgX, config.svgY)
     : new THREE.Vector3(config.x ?? 0, 0, config.z ?? 0);
   const initial = savedPositions[config.id] || { x: planPosition.x, y: config.y, z: planPosition.z };
   device.position.set(initial.x, initial.y, initial.z);
+  device.userData.baseScale = config.scale || 1;
+  device.scale.setScalar(device.userData.baseScale);
   device.userData.deviceId = config.id;
   device.userData.data = config.data;
   device.userData.config = config;
@@ -1519,10 +1635,12 @@ function createDeviceObject(config, savedPositions) {
 function createDevices() {
   const savedPositions = readSavedDevicePositions();
   const addedConfigs = readAddedDeviceConfigs();
-  [...DEVICE_CONFIGS, ...addedConfigs].forEach((config) => {
+  [...DEVICE_CONFIGS, ...REGIONAL_DEVICE_CONFIGS, ...addedConfigs].forEach((config) => {
     const device = createDeviceObject(config, savedPositions);
-    const card = findDeviceCard(config.id) || createDynamicDeviceCard(config);
-    bindDeviceCard(card, device);
+    if (config.showCard !== false) {
+      const card = findDeviceCard(config.id) || createDynamicDeviceCard(config);
+      bindDeviceCard(card, device);
+    }
   });
 }
 
@@ -2580,9 +2698,9 @@ renderer.domElement.addEventListener('pointermove', (event) => {
   clearRoomTooltip();
 
   if (hoveredDevice !== device) {
-    if (hoveredDevice) hoveredDevice.scale.setScalar(1);
+    if (hoveredDevice) hoveredDevice.scale.setScalar(hoveredDevice.userData.baseScale || 1);
     hoveredDevice = device;
-    hoveredDevice.scale.setScalar(1.07);
+    hoveredDevice.scale.setScalar((hoveredDevice.userData.baseScale || 1) * 1.07);
   }
   renderer.domElement.style.cursor = deviceDragEnabled ? 'grab' : 'help';
   updateDeviceTooltip(device, event.clientX, event.clientY);
