@@ -276,15 +276,23 @@ scene.fog = new THREE.FogExp2(0xe8e8e3, 0.0042);
 
 const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 800);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const MAX_PIXEL_RATIO = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4 ? 1.25 : 1.5;
+const RENDER_FPS = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4 ? 30 : 45;
+renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;
+renderer.shadowMap.needsUpdate = true;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
 renderer.domElement.tabIndex = 0;
 container.appendChild(renderer.domElement);
+
+function invalidateShadows() {
+  renderer.shadowMap.needsUpdate = true;
+}
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -356,7 +364,7 @@ scene.add(hemisphere);
 const sun = new THREE.DirectionalLight(0xfffdf5, 3.1);
 sun.position.set(-48, 90, 45);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(1024, 1024);
 sun.shadow.camera.left = -95;
 sun.shadow.camera.right = 95;
 sun.shadow.camera.top = 65;
@@ -426,6 +434,9 @@ const deviceObjects = new Map();
 const meetingRoomVisuals = new Map();
 const lightingObjects = new Map();
 const cctvObjects = new Map();
+const devicePickTargets = [];
+const cctvPickTargets = [];
+const alertDevices = new Set();
 const deviceTooltip = document.querySelector('#device-tooltip');
 const roomTooltip = document.querySelector('#room-tooltip');
 const cctvModal = document.querySelector('#cctv-modal');
@@ -1039,6 +1050,7 @@ function createAlertLight() {
   const light = new THREE.PointLight(0xff2418, 0, 20, 2);
   light.position.y = 1.1;
   light.castShadow = false;
+  light.visible = false;
   return light;
 }
 
@@ -1322,6 +1334,7 @@ function createCctvFixtures() {
     object.userData.cctvId = fixture.id;
     object.userData.label = fixture.label;
     cctvObjects.set(fixture.id, object);
+    cctvPickTargets.push(object);
     model.add(object);
     updateCctvObject(fixture.id);
   });
@@ -1367,7 +1380,13 @@ function applyDeviceColor(device, colorName) {
     glow.uniforms.uPulse.value = device.userData.color === 'red' ? 1 : 0;
   }
   if (device.userData.alertAura) device.userData.alertAura.visible = device.userData.color === 'red';
-  if (device.userData.alertLight) device.userData.alertLight.intensity = device.userData.color === 'red' ? 26 : 0;
+  if (device.userData.alertLight) {
+    const alertActive = device.userData.color === 'red';
+    device.userData.alertLight.visible = alertActive;
+    device.userData.alertLight.intensity = alertActive ? 26 : 0;
+    if (alertActive) alertDevices.add(device);
+    else alertDevices.delete(device);
+  }
 }
 
 function colorToCss(colorName) {
@@ -1436,6 +1455,7 @@ function finishDeviceDrag(event) {
   renderer.domElement.style.cursor = '';
   if (draggedCctv) saveCctvPositions();
   else saveDevicePositions();
+  invalidateShadows();
   selectObjectForAdjustment(adjustedObject);
 }
 
@@ -1591,6 +1611,7 @@ function bindDeviceCard(card, device) {
       if (!Number.isFinite(value)) return;
       device.position[axis] = value;
       updateDeviceBeacon(device);
+      invalidateShadows();
       saveDevicePositions();
     });
   });
@@ -1628,6 +1649,7 @@ function createDeviceObject(config, savedPositions) {
   applyDeviceColor(device, initial.color || config.color);
   updateDeviceBeacon(device);
   deviceObjects.set(config.id, device);
+  devicePickTargets.push(device);
   model.add(device);
   return device;
 }
@@ -2148,6 +2170,7 @@ function enterFloorPlan() {
   moveCamera(cameraStates.perspective, 1050);
   controls.minDistance = 35;
   controls.maxDistance = 280;
+  invalidateShadows();
   renderer.domElement.style.cursor = '';
   markPowerActivity();
 }
@@ -2170,6 +2193,7 @@ function showBuildingOverview() {
   moveCamera(cameraStates.building, 1050);
   controls.minDistance = 48;
   controls.maxDistance = 210;
+  invalidateShadows();
   renderer.domElement.style.cursor = '';
 }
 
@@ -2315,6 +2339,7 @@ function applyTimeLighting() {
   scene.background.copy(background);
   scene.fog.color.copy(background);
   updateOfficeLightingLevel();
+  invalidateShadows();
 }
 
 function syncLightingTimeControls() {
@@ -2523,9 +2548,8 @@ function exitPowerSave(restore3D = true) {
   if (!powerSaveActive) return;
   powerSaveActive = false;
   controls.enabled = true;
-  renderer.shadowMap.autoUpdate = true;
-  renderer.shadowMap.needsUpdate = true;
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  invalidateShadows();
+  renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
   renderer.setSize(innerWidth, innerHeight);
   lastPowerActivity = Date.now();
   if (restore3D && sceneMode === 'floor') {
@@ -2625,7 +2649,7 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
   }
   if (sceneMode === 'floor' && event.button === 0) {
     setPointerFromEvent(event);
-    const cctvHit = raycaster.intersectObjects([...cctvObjects.values()], true)[0];
+    const cctvHit = raycaster.intersectObjects(cctvPickTargets, true)[0];
     const cctv = cctvHit ? getCctvRoot(cctvHit.object) : null;
     if (cctv) {
       if (deviceDragEnabled) beginObjectDrag(cctv, event);
@@ -2639,13 +2663,13 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
   }
   if (!deviceDragEnabled || event.button !== 0) return;
   setPointerFromEvent(event);
-  const hit = raycaster.intersectObjects([...deviceObjects.values()], true)[0];
+  const hit = raycaster.intersectObjects(devicePickTargets, true)[0];
   const device = hit ? getDeviceRoot(hit.object) : null;
   if (!device) return;
   beginObjectDrag(device, event);
 }, { capture: true });
 
-renderer.domElement.addEventListener('pointermove', (event) => {
+function handleScenePointerMove(event) {
   if (!pointerOverScene) {
     pointerOverScene = true;
     updateAutoRotate();
@@ -2676,7 +2700,7 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     renderer.domElement.style.cursor = 'grabbing';
     return;
   }
-  const cctvHit = raycaster.intersectObjects([...cctvObjects.values()], true)[0];
+  const cctvHit = raycaster.intersectObjects(cctvPickTargets, true)[0];
   const cctv = cctvHit ? getCctvRoot(cctvHit.object) : null;
   if (cctv) {
     setRoomHighlight(-1);
@@ -2686,7 +2710,7 @@ renderer.domElement.addEventListener('pointermove', (event) => {
     return;
   }
   const roomRegionId = updateRoomHighlight();
-  const hit = raycaster.intersectObjects([...deviceObjects.values()], true)[0];
+  const hit = raycaster.intersectObjects(devicePickTargets, true)[0];
   const device = hit ? getDeviceRoot(hit.object) : null;
 
   if (!device) {
@@ -2704,7 +2728,20 @@ renderer.domElement.addEventListener('pointermove', (event) => {
   }
   renderer.domElement.style.cursor = deviceDragEnabled ? 'grab' : 'help';
   updateDeviceTooltip(device, event.clientX, event.clientY);
-});
+}
+
+let pendingPointerMove = null;
+let pointerMoveFrame = 0;
+renderer.domElement.addEventListener('pointermove', (event) => {
+  pendingPointerMove = event;
+  if (pointerMoveFrame) return;
+  pointerMoveFrame = requestAnimationFrame(() => {
+    pointerMoveFrame = 0;
+    const nextEvent = pendingPointerMove;
+    pendingPointerMove = null;
+    if (nextEvent) handleScenePointerMove(nextEvent);
+  });
+}, { passive: true });
 
 renderer.domElement.addEventListener('pointerup', finishDeviceDrag);
 renderer.domElement.addEventListener('pointercancel', finishDeviceDrag);
@@ -2755,30 +2792,32 @@ async function init() {
 
 const AUTO_ROTATE_AXIS = new THREE.Vector3(0, 1, 0);
 const AUTO_ROTATE_SPEED = THREE.MathUtils.degToRad(3.6);
+const autoRotateOffset = new THREE.Vector3();
 let previousFrameTime = performance.now();
-let lastPowerSaveRender = 0;
+let lastRenderTime = 0;
 
 function animate(now) {
   requestAnimationFrame(animate);
+  const frameInterval = powerSaveActive ? 1000 : 1000 / RENDER_FPS;
+  if (!animation && now - lastRenderTime < frameInterval) return;
+  lastRenderTime = now;
   const deltaSeconds = Math.min((now - previousFrameTime) / 1000, 0.05);
   previousFrameTime = now;
-  if (powerSaveActive && !animation && now - lastPowerSaveRender < 1000) return;
-  if (powerSaveActive) lastPowerSaveRender = now;
   updateCameraAnimation(now);
   if (autoRotateActive) {
-    const offset = camera.position.clone().sub(controls.target);
-    offset.applyAxisAngle(AUTO_ROTATE_AXIS, AUTO_ROTATE_SPEED * deltaSeconds);
+    autoRotateOffset.copy(camera.position).sub(controls.target);
+    autoRotateOffset.applyAxisAngle(AUTO_ROTATE_AXIS, AUTO_ROTATE_SPEED * deltaSeconds);
     if (sceneMode === 'building') {
       const autoZoomDistance = THREE.MathUtils.clamp(
         buildingAutoZoomBaseDistance * getBuildingAutoZoomPulse(now),
         controls.minDistance,
         controls.maxDistance
       );
-      offset.setLength(autoZoomDistance);
+      autoRotateOffset.setLength(autoZoomDistance);
     }
-    camera.position.copy(controls.target).add(offset);
+    camera.position.copy(controls.target).add(autoRotateOffset);
   }
-  deviceObjects.forEach((device) => {
+  alertDevices.forEach((device) => {
     const glow = device.userData.beacon?.userData.glowMaterial;
     if (glow) glow.uniforms.uTime.value = now * 0.001;
     const aura = device.userData.alertAura;
