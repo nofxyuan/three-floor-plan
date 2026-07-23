@@ -284,7 +284,8 @@ document.documentElement.addEventListener('mouseleave', () => {
   updateAutoRotate();
 });
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0xb7b6ac, 2.5));
+const hemisphere = new THREE.HemisphereLight(0xffffff, 0x8f918a, 2.5);
+scene.add(hemisphere);
 
 const sun = new THREE.DirectionalLight(0xfffdf5, 3.1);
 sun.position.set(-48, 90, 45);
@@ -302,6 +303,34 @@ scene.add(sun);
 const fill = new THREE.DirectionalLight(0xc8d6ff, 1.2);
 fill.position.set(75, 42, -55);
 scene.add(fill);
+
+const SCENE_THEMES = {
+  building: {
+    background: 0xe8e8e3,
+    exposure: 1.1,
+    hemisphere: 2.5,
+    sun: 3.1,
+    fill: 1.2
+  },
+  floor: {
+    background: 0xc9cbc6,
+    exposure: 0.75,
+    hemisphere: 1.05,
+    sun: 2.45,
+    fill: 0.28
+  }
+};
+
+function applySceneTheme(mode) {
+  const theme = SCENE_THEMES[mode];
+  if (!theme) return;
+  scene.background.setHex(theme.background);
+  scene.fog.color.setHex(theme.background);
+  renderer.toneMappingExposure = theme.exposure;
+  hemisphere.intensity = theme.hemisphere;
+  sun.intensity = theme.sun;
+  fill.intensity = theme.fill;
+}
 
 const model = new THREE.Group();
 scene.add(model);
@@ -438,7 +467,7 @@ function removeDoorSymbols(svg) {
     cover.setAttribute('y', String(region.y));
     cover.setAttribute('width', String(region.width));
     cover.setAttribute('height', String(region.height));
-    cover.setAttribute('fill', '#f6f5ef');
+    cover.setAttribute('fill', '#d1cec6');
     svg.appendChild(cover);
   });
 
@@ -787,7 +816,7 @@ function updateRoomHighlight() {
 
 function createWallInstances(segments) {
   const geometry = new THREE.BoxGeometry(1, 1, 1);
-  const material = new THREE.MeshStandardMaterial({ color: 0xeae9e2, roughness: 0.72, metalness: 0.02 });
+  const material = new THREE.MeshStandardMaterial({ color: 0xbfc1bc, roughness: 0.78, metalness: 0.015 });
   const walls = new THREE.InstancedMesh(geometry, material, segments.length);
   walls.castShadow = true;
   walls.receiveShadow = true;
@@ -1604,7 +1633,7 @@ async function makePlanTexture(svgText) {
   };
 
   const [texture, labelTexture] = await Promise.all([
-    renderSvg(svg, '#f6f5ef'),
+    renderSvg(svg, '#d1cec6'),
     renderSvg(labelSvg)
   ]);
   return { texture, labelTexture, svg };
@@ -1613,7 +1642,7 @@ async function makePlanTexture(svgText) {
 function createFoundation(texture, labelTexture) {
   const slab = new THREE.Mesh(
     new THREE.BoxGeometry(PLAN_WIDTH + 2.4, 0.36, PLAN_DEPTH + 2.4),
-    new THREE.MeshStandardMaterial({ color: 0xdad9d2, roughness: 0.83 })
+    new THREE.MeshStandardMaterial({ color: 0x979991, roughness: 0.86 })
   );
   slab.position.y = -0.18;
   slab.receiveShadow = true;
@@ -1898,6 +1927,7 @@ function setActiveView(name) {
 function enterFloorPlan() {
   if (sceneMode === 'floor') return;
   sceneMode = 'floor';
+  applySceneTheme('floor');
   document.querySelector('#app').classList.remove('building-mode');
   document.querySelector('#app').classList.add('floor-plan-mode');
   buildingGroup.visible = false;
@@ -1915,6 +1945,7 @@ function showBuildingOverview() {
   exitPowerSave(false);
   closeCctvConnection();
   sceneMode = 'building';
+  applySceneTheme('building');
   document.querySelector('#app').classList.remove('floor-plan-mode');
   document.querySelector('#app').classList.add('building-mode');
   setDevicePanel(false);
