@@ -351,6 +351,7 @@ let floor14Object = null;
 let floor14Targets = [];
 let buildingFloorMeshes = [];
 let sceneMode = 'building';
+let floorWallMaterial = null;
 
 const deviceObjects = new Map();
 const meetingRoomVisuals = new Map();
@@ -827,6 +828,7 @@ function updateRoomHighlight() {
 function createWallInstances(segments) {
   const geometry = new THREE.BoxGeometry(1, 1, 1);
   const material = new THREE.MeshStandardMaterial({ color: 0xbfc1bc, roughness: 0.78, metalness: 0.015 });
+  floorWallMaterial = material;
   const walls = new THREE.InstancedMesh(geometry, material, segments.length);
   walls.castShadow = true;
   walls.receiveShadow = true;
@@ -2081,6 +2083,16 @@ function applyTimeLighting() {
     const noonBackground = new THREE.Color(0xc9cbc6);
     const eveningBackground = new THREE.Color(0xc9b9ae);
     background.copy(progress < 0.5 ? morningBackground : eveningBackground).lerp(noonBackground, elevation);
+
+    if (floorWallMaterial) {
+      const morningWall = new THREE.Color(0xf0eee7);
+      const noonWall = new THREE.Color(0xc4c6c0);
+      const eveningWall = new THREE.Color(0xa8a7a1);
+      const wallColor = progress < 0.5
+        ? morningWall.lerp(noonWall, progress * 2)
+        : noonWall.lerp(eveningWall, (progress - 0.5) * 2);
+      floorWallMaterial.color.copy(wallColor);
+    }
   } else {
     const beforeDawn = hour < 6;
     sun.position.set(beforeDawn ? 76 : -76, 30, -42);
@@ -2090,6 +2102,7 @@ function applyTimeLighting() {
     fill.intensity = 0.16;
     renderer.toneMappingExposure = 0.58;
     background.setHex(0x8f969e);
+    floorWallMaterial?.color.setHex(0x8a8e91);
   }
 
   hemisphere.color.setHex(daylight ? 0xeaf0ee : 0x9caccc);
