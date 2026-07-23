@@ -1642,14 +1642,34 @@ function createBuildingOverview() {
   const floorHeight = 2.2;
   const towerX = 24;
   const totalHeight = 22 * floorHeight;
-  const standardMaterial = new THREE.MeshPhysicalMaterial({
-    color: 0xdfe4e1,
-    roughness: 0.34,
-    metalness: 0.08,
+  const towerWidth = 42;
+  const towerDepth = 28;
+  const glassMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x6f8795,
+    roughness: 0.18,
+    metalness: 0.42,
     transparent: true,
-    opacity: 0.88
+    opacity: 0.74,
+    transmission: 0.08
   });
-  const podiumMaterial = new THREE.MeshStandardMaterial({ color: 0xcfd3cf, roughness: 0.62, metalness: 0.05 });
+  const podiumGlassMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x526b77,
+    roughness: 0.2,
+    metalness: 0.38,
+    transparent: true,
+    opacity: 0.84
+  });
+  const concreteMaterial = new THREE.MeshStandardMaterial({ color: 0xe5e5e0, roughness: 0.58, metalness: 0.04 });
+  const concreteShadeMaterial = new THREE.MeshStandardMaterial({ color: 0xc7cac7, roughness: 0.68, metalness: 0.03 });
+  const mullionMaterial = new THREE.MeshStandardMaterial({ color: 0xb9c1c2, roughness: 0.38, metalness: 0.48 });
+  const recessMaterial = new THREE.MeshStandardMaterial({ color: 0x20282d, roughness: 0.74, metalness: 0.12 });
+  const balconyGlassMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x91aab5,
+    roughness: 0.12,
+    metalness: 0.28,
+    transparent: true,
+    opacity: 0.62
+  });
   const highlightMaterial = new THREE.MeshStandardMaterial({
     color: 0xffcf3d,
     emissive: 0x8c6500,
@@ -1658,56 +1678,133 @@ function createBuildingOverview() {
     metalness: 0.03
   });
 
+  const addBox = (size, position, material, { castShadow = true, receiveShadow = false } = {}) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
+    mesh.position.set(...position);
+    mesh.castShadow = castShadow;
+    mesh.receiveShadow = receiveShadow;
+    buildingGroup.add(mesh);
+    return mesh;
+  };
+
   const ground = new THREE.Mesh(
-    new THREE.CylinderGeometry(45, 49, 0.65, 64),
-    new THREE.MeshStandardMaterial({ color: 0xd6d7d1, roughness: 0.9 })
+    new THREE.BoxGeometry(86, 0.65, 62),
+    new THREE.MeshStandardMaterial({ color: 0xd7d8d3, roughness: 0.92 })
   );
-  ground.scale.z = 0.72;
   ground.position.set(towerX, -0.42, 0);
   ground.receiveShadow = true;
   buildingGroup.add(ground);
+
+  addBox([86, 0.08, 13], [towerX, -0.04, 24.2], new THREE.MeshStandardMaterial({
+    color: 0x747b7c,
+    roughness: 0.96
+  }), { castShadow: false, receiveShadow: true });
+  addBox([74, 0.1, 5.5], [towerX, 0.03, 16.2], new THREE.MeshStandardMaterial({
+    color: 0xa8aaa5,
+    roughness: 0.9
+  }), { castShadow: false, receiveShadow: true });
 
   for (let floor = 1; floor <= 22; floor += 1) {
     const isPodium = floor <= 3;
     const width = isPodium ? 47 : 40;
     const depth = isPodium ? 31 : 26;
-    const y = (floor - 1) * floorHeight + 0.7;
-    const geometry = new THREE.BoxGeometry(width, 1.45, depth);
-    const material = floor === 14 ? highlightMaterial : (isPodium ? podiumMaterial : standardMaterial);
+    const baseY = (floor - 1) * floorHeight;
+    const slabY = baseY + 0.18;
+    const geometry = new THREE.BoxGeometry(width, floor === 14 ? 0.42 : 0.26, depth);
+    const material = floor === 14 ? highlightMaterial : concreteMaterial;
     const floorMesh = new THREE.Mesh(geometry, material);
-    floorMesh.position.set(towerX, y, 0);
+    floorMesh.position.set(towerX, slabY, 0);
     floorMesh.castShadow = true;
     floorMesh.receiveShadow = true;
     floorMesh.userData.floor = floor;
     buildingFloorMeshes.push(floorMesh);
     buildingGroup.add(floorMesh);
 
-    const edge = new THREE.LineSegments(
-      new THREE.EdgesGeometry(geometry),
-      new THREE.LineBasicMaterial({ color: floor === 14 ? 0xb68100 : 0x969c98, transparent: true, opacity: floor === 14 ? 0.95 : 0.28 })
+    const glass = new THREE.Mesh(
+      new THREE.BoxGeometry(width - 0.8, 1.84, depth - 0.8),
+      isPodium ? podiumGlassMaterial : glassMaterial
     );
-    edge.position.copy(floorMesh.position);
-    edge.userData.floor = floor;
-    buildingGroup.add(edge);
+    glass.position.set(towerX, baseY + 1.22, 0);
+    glass.castShadow = false;
+    glass.receiveShadow = true;
+    buildingGroup.add(glass);
 
     if (floor === 14) {
       floor14Object = floorMesh;
-      floor14Targets.push(floorMesh, edge);
+      floor14Targets.push(floorMesh);
     }
   }
 
-  const frameMaterial = new THREE.MeshStandardMaterial({ color: 0x7d8581, roughness: 0.42, metalness: 0.38 });
-  [[-19, -12], [19, -12], [-19, 12], [19, 12]].forEach(([x, z]) => {
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.5, totalHeight, 0.5), frameMaterial);
-    frame.position.set(towerX + x, totalHeight / 2, z);
-    frame.castShadow = true;
-    buildingGroup.add(frame);
+  // Glass curtain-wall grid on the broad front facade.
+  for (let x = -19.5; x <= 19.5; x += 2.6) {
+    addBox([0.12, totalHeight - 0.8, 0.16], [towerX + x, totalHeight / 2, towerDepth / 2 - 0.25], mullionMaterial, {
+      castShadow: false
+    });
+  }
+  // Narrower grid on both side elevations.
+  for (let z = -12; z <= 12; z += 2.4) {
+    addBox([0.16, totalHeight - 0.8, 0.12], [towerX - towerWidth / 2 + 0.25, totalHeight / 2, z], mullionMaterial, {
+      castShadow: false
+    });
+    addBox([0.16, totalHeight - 0.8, 0.12], [towerX + towerWidth / 2 - 0.25, totalHeight / 2, z], mullionMaterial, {
+      castShadow: false
+    });
+  }
+
+  // The photo's deep horizontal openings on the right side.
+  for (let floor = 4; floor <= 21; floor += 1) {
+    const y = (floor - 1) * floorHeight + 1.18;
+    addBox([0.28, 1.24, 16.4], [towerX + towerWidth / 2 + 0.04, y, -2.5], recessMaterial, {
+      castShadow: false
+    });
+    addBox([0.46, 0.22, 17.2], [towerX + towerWidth / 2 + 0.24, y - 0.78, -2.5], concreteMaterial);
+  }
+
+  // Central stack of projecting balconies with glass rails and dark recesses.
+  for (let floor = 4; floor <= 21; floor += 1) {
+    const baseY = (floor - 1) * floorHeight;
+    const balconyZ = towerDepth / 2 + 1.45;
+    addBox([10.8, 0.26, 3.55], [towerX + 7.2, baseY + 0.35, balconyZ], concreteShadeMaterial);
+    addBox([10.15, 1.42, 0.22], [towerX + 7.2, baseY + 1.15, towerDepth / 2 + 0.13], recessMaterial, {
+      castShadow: false
+    });
+    addBox([10.2, 0.64, 0.16], [towerX + 7.2, baseY + 0.82, towerDepth / 2 + 3.18], balconyGlassMaterial, {
+      castShadow: false
+    });
+    [-5.05, 5.05].forEach((offsetX) => {
+      addBox([0.1, 0.72, 3.05], [towerX + 7.2 + offsetX, baseY + 0.83, balconyZ + 0.12], mullionMaterial, {
+        castShadow: false
+      });
+    });
+  }
+
+  // White concrete fins create the strong vertical frame seen in the reference.
+  [-20.8, -1.1, 12.9, 20.8].forEach((x) => {
+    addBox([0.78, totalHeight + 1.4, 0.82], [towerX + x, totalHeight / 2, towerDepth / 2 + 0.15], concreteMaterial);
+  });
+  [[-20.8, -13.5], [-20.8, 13.5], [20.8, -13.5], [20.8, 13.5]].forEach(([x, z]) => {
+    addBox([0.72, totalHeight + 1.2, 0.72], [towerX + x, totalHeight / 2, z], concreteMaterial);
   });
 
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(16, 4.4, 11), podiumMaterial);
-  roof.position.set(towerX, totalHeight + 1.55, 0);
-  roof.castShadow = true;
-  buildingGroup.add(roof);
+  // Oversized portal frame on the front glass facade.
+  const portalX = towerX - 9.2;
+  const portalCenterY = 20.2;
+  const portalHeight = 14.5;
+  const portalWidth = 12.8;
+  addBox([0.82, portalHeight, 1.05], [portalX - portalWidth / 2, portalCenterY, towerDepth / 2 + 0.62], concreteMaterial);
+  addBox([0.82, portalHeight, 1.05], [portalX + portalWidth / 2, portalCenterY, towerDepth / 2 + 0.62], concreteMaterial);
+  addBox([portalWidth + 0.82, 0.82, 1.05], [portalX, portalCenterY + portalHeight / 2, towerDepth / 2 + 0.62], concreteMaterial);
+  addBox([portalWidth + 0.82, 0.82, 1.05], [portalX, portalCenterY - portalHeight / 2, towerDepth / 2 + 0.62], concreteMaterial);
+
+  // Three-level podium, entrance canopy, roof plant and parapets.
+  addBox([49, 0.42, 33], [towerX, 6.65, 0], concreteMaterial);
+  addBox([14, 0.42, 5], [towerX - 7, 3.3, 17.2], concreteMaterial);
+  addBox([18, 3.8, 11], [towerX - 3, totalHeight + 1.9, -2.5], concreteShadeMaterial);
+  addBox([10, 2.3, 8], [towerX + 10, totalHeight + 1.15, 3], recessMaterial);
+  addBox([43.5, 0.48, 29.5], [towerX, totalHeight + 0.45, 0], concreteMaterial);
+  [-19.8, 19.8].forEach((x) => {
+    addBox([0.22, 1.2, 27.4], [towerX + x, totalHeight + 1.1, 0], mullionMaterial, { castShadow: false });
+  });
 
   const labelCanvas = document.createElement('canvas');
   labelCanvas.width = 512;
@@ -1734,7 +1831,7 @@ function createBuildingOverview() {
   const labelTexture = new THREE.CanvasTexture(labelCanvas);
   labelTexture.colorSpace = THREE.SRGBColorSpace;
   const floorLabel = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture, transparent: true, depthTest: false }));
-  floorLabel.position.set(towerX + 31, (14 - 1) * floorHeight + 0.7, 0);
+  floorLabel.position.set(towerX + 31, (14 - 1) * floorHeight + 0.25, 0);
   floorLabel.scale.set(15, 4.7, 1);
   floorLabel.renderOrder = 20;
   floorLabel.userData.floor = 14;
