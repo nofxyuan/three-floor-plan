@@ -1142,32 +1142,85 @@ function createTemperatureSensor() {
 
 function createSosEmergencyDevice() {
   const group = new THREE.Group();
-  const housingMaterial = new THREE.MeshStandardMaterial({ color: 0x30332f, roughness: 0.46, metalness: 0.14 });
-  const panelMaterial = new THREE.MeshStandardMaterial({ color: 0xf1f0ea, roughness: 0.38 });
-  const statusMaterial = new THREE.MeshBasicMaterial({ color: DEVICE_COLORS.green });
+  const baseMaterial = new THREE.MeshStandardMaterial({ color: 0x30332f, roughness: 0.42, metalness: 0.24 });
+  const cageMaterial = new THREE.MeshStandardMaterial({ color: 0x6f746d, roughness: 0.34, metalness: 0.52 });
+  const domeMaterial = new THREE.MeshStandardMaterial({
+    color: DEVICE_COLORS.green,
+    emissive: DEVICE_COLORS.green,
+    emissiveIntensity: 0.32,
+    roughness: 0.14,
+    metalness: 0.02,
+    transparent: true,
+    opacity: 0.38,
+    depthWrite: false,
+    side: THREE.DoubleSide
+  });
+  const coreMaterial = new THREE.MeshBasicMaterial({ color: DEVICE_COLORS.green });
+  const beamMaterial = new THREE.MeshBasicMaterial({
+    color: DEVICE_COLORS.green,
+    transparent: true,
+    opacity: 0.28,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending
+  });
 
-  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.58, 1.35, 18), housingMaterial);
-  pedestal.position.y = 0.68;
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.84, 0.98, 0.32, 28), baseMaterial);
+  foot.position.y = 0.16;
+  foot.castShadow = true;
+  group.add(foot);
+
+  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.68, 0.72, 24), baseMaterial);
+  pedestal.position.y = 0.62;
   pedestal.castShadow = true;
   group.add(pedestal);
 
-  const housing = new THREE.Mesh(new THREE.BoxGeometry(2.25, 1.62, 0.72), housingMaterial);
-  housing.position.y = 1.72;
-  housing.castShadow = true;
-  group.add(housing);
+  const lowerCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.86, 0.86, 0.22, 28), cageMaterial);
+  lowerCollar.position.y = 1.04;
+  group.add(lowerCollar);
 
-  const face = new THREE.Mesh(new THREE.BoxGeometry(1.82, 1.18, 0.12), panelMaterial);
-  face.position.set(0, 1.72, 0.42);
-  group.add(face);
+  const dome = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.72, 1.08, 32, 1, true), domeMaterial);
+  dome.position.y = 1.67;
+  group.add(dome);
 
-  const button = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.46, 0.22, 24), statusMaterial);
-  button.rotation.x = Math.PI / 2;
-  button.position.set(0, 1.57, 0.56);
-  group.add(button);
+  const domeCap = new THREE.Mesh(
+    new THREE.SphereGeometry(0.72, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2),
+    domeMaterial
+  );
+  domeCap.position.y = 2.21;
+  group.add(domeCap);
 
-  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), statusMaterial);
-  lamp.position.set(0.7, 2.13, 0.5);
-  group.add(lamp);
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 0.82, 18), coreMaterial);
+  core.position.y = 1.63;
+  group.add(core);
+
+  const rotor = new THREE.Group();
+  rotor.position.y = 1.7;
+  [0, Math.PI / 2].forEach((rotation) => {
+    const beam = new THREE.Mesh(new THREE.PlaneGeometry(1.46, 0.5), beamMaterial);
+    beam.rotation.y = rotation;
+    rotor.add(beam);
+  });
+  group.add(rotor);
+
+  const upperRing = new THREE.Mesh(new THREE.TorusGeometry(0.76, 0.045, 8, 32), cageMaterial);
+  upperRing.rotation.x = Math.PI / 2;
+  upperRing.position.y = 2.22;
+  group.add(upperRing);
+  const lowerRing = upperRing.clone();
+  lowerRing.position.y = 1.12;
+  group.add(lowerRing);
+
+  for (let index = 0; index < 4; index += 1) {
+    const angle = index * Math.PI / 2 + Math.PI / 4;
+    const guard = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.08, 8), cageMaterial);
+    guard.position.set(Math.cos(angle) * 0.73, 1.67, Math.sin(angle) * 0.73);
+    group.add(guard);
+  }
+
+  const topCap = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.48, 0.18, 20), cageMaterial);
+  topCap.position.y = 2.84;
+  group.add(topCap);
 
   const labelCanvas = document.createElement('canvas');
   labelCanvas.width = 256;
@@ -1190,24 +1243,27 @@ function createSosEmergencyDevice() {
     depthWrite: false,
     toneMapped: false
   }));
-  label.position.set(0, 3.05, 0);
-  label.scale.set(2.8, 1.05, 1);
+  label.position.set(0, 3.35, 0);
+  label.scale.set(2.1, 0.78, 1);
   label.renderOrder = 6;
   group.add(label);
 
-  const beacon = createDeviceBeacon(DEVICE_COLORS.green, 1.45);
+  const beacon = createDeviceBeacon(DEVICE_COLORS.green, 1.32);
   group.userData.beacon = beacon;
   group.add(beacon);
   const aura = createAlertAura(7.2, 7.2);
-  aura.position.set(0, 1.65, -0.34);
+  aura.position.set(0, 1.72, -0.34);
   group.userData.alertAura = aura;
   group.add(aura);
   const alertLight = createAlertLight();
-  alertLight.position.y = 2.1;
-  alertLight.distance = 16;
+  alertLight.position.y = 1.8;
+  alertLight.distance = 18;
   group.userData.alertLight = alertLight;
   group.add(alertLight);
-  group.userData.colorMaterials = [statusMaterial];
+  group.userData.colorMaterials = [domeMaterial, coreMaterial, beamMaterial];
+  group.userData.sosDomeMaterial = domeMaterial;
+  group.userData.sosRotor = rotor;
+  group.userData.sosBeamMaterial = beamMaterial;
   return group;
 }
 
@@ -1448,6 +1504,13 @@ function applyDeviceColor(device, colorName) {
   const color = DEVICE_COLORS[colorName] ?? DEVICE_COLORS.green;
   device.userData.color = colorName in DEVICE_COLORS ? colorName : 'green';
   device.userData.colorMaterials.forEach((material) => material.color.setHex(color));
+  if (device.userData.sosDomeMaterial) {
+    const alertActive = device.userData.color === 'red';
+    device.userData.sosDomeMaterial.emissive.setHex(color);
+    device.userData.sosDomeMaterial.emissiveIntensity = alertActive ? 1.35 : 0.32;
+    device.userData.sosDomeMaterial.opacity = alertActive ? 0.58 : 0.38;
+    device.userData.sosBeamMaterial.opacity = alertActive ? 0.62 : 0.24;
+  }
   const glow = device.userData.beacon?.userData.glowMaterial;
   if (glow) {
     glow.uniforms.uColor.value.setHex(color);
@@ -2911,6 +2974,10 @@ function animate(now) {
   alertDevices.forEach((device) => {
     const glow = device.userData.beacon?.userData.glowMaterial;
     if (glow) glow.uniforms.uTime.value = now * 0.001;
+    if (device.userData.sosRotor) {
+      device.userData.sosRotor.rotation.y += deltaSeconds * 5.4;
+      device.userData.sosBeamMaterial.opacity = 0.52 + Math.sin(now * 0.008) * 0.12;
+    }
     const aura = device.userData.alertAura;
     if (aura?.visible) {
       const pulse = 1 + Math.sin(now * 0.0032) * 0.07;
