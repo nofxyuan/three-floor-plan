@@ -380,6 +380,11 @@ body { overscroll-behavior: none; }
 .cctv-state-picker button[data-cctv-state="online"][aria-pressed="true"] { color: #fff; background: #367fb2; border-color: #367fb2; }
 .cctv-state-picker button[data-cctv-state="offline"][aria-pressed="true"] { color: #555852; background: rgba(149,151,144,.18); border-color: rgba(119,121,115,.38); }
 .cctv-angle { margin-top: 10px; }
+.sos-state-picker { margin-top: 11px; padding-top: 11px; border-top: 1px solid rgba(25,26,23,.07); }
+.sos-state-picker button[data-color="green"] i { background: #4caf50; box-shadow: 0 0 0 3px rgba(76,175,80,.13); }
+.sos-state-picker button[data-color="red"] i { background: #e34c4c; box-shadow: 0 0 0 3px rgba(227,76,76,.13); }
+.sos-state-picker button[data-color="green"][aria-pressed="true"] { color: #286f2c; background: rgba(76,175,80,.13); border-color: rgba(65,149,69,.4); }
+.sos-state-picker button[data-color="red"][aria-pressed="true"] { color: #fff; background: #d84444; border-color: #d84444; box-shadow: 0 0 15px rgba(227,76,76,.2); }
 
 .device-card { padding: 14px; background: rgba(255,255,255,.62); border: 1px solid rgba(28,29,26,.08); border-radius: 14px; }
 .device-card + .device-card { margin-top: 9px; }

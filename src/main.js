@@ -88,6 +88,10 @@ const DEVICE_CONFIGS = [
   {
     id: 'temperature-sensor', svgX: 1040, svgY: 374, y: 3.4, type: 'sensor', color: 'green', label: '溫濕度感應器', location: '擴編主管室左側',
     data: { name: '擴編主管室溫濕度感應器', energy: '0.08 kWh', runtime: '18 天 7 小時', gateway: '14F-GW-02' }
+  },
+  {
+    id: 'sos-emergency', x: 0, z: 0, y: 0.18, type: 'sos', color: 'green', label: 'SOS 緊急設備', location: '畫面中央',
+    data: { name: 'SOS 緊急設備', energy: '0.02 kWh', runtime: '待命中', gateway: '14F-GW-SOS' }
   }
 ];
 
@@ -1136,6 +1140,77 @@ function createTemperatureSensor() {
   return group;
 }
 
+function createSosEmergencyDevice() {
+  const group = new THREE.Group();
+  const housingMaterial = new THREE.MeshStandardMaterial({ color: 0x30332f, roughness: 0.46, metalness: 0.14 });
+  const panelMaterial = new THREE.MeshStandardMaterial({ color: 0xf1f0ea, roughness: 0.38 });
+  const statusMaterial = new THREE.MeshBasicMaterial({ color: DEVICE_COLORS.green });
+
+  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.58, 1.35, 18), housingMaterial);
+  pedestal.position.y = 0.68;
+  pedestal.castShadow = true;
+  group.add(pedestal);
+
+  const housing = new THREE.Mesh(new THREE.BoxGeometry(2.25, 1.62, 0.72), housingMaterial);
+  housing.position.y = 1.72;
+  housing.castShadow = true;
+  group.add(housing);
+
+  const face = new THREE.Mesh(new THREE.BoxGeometry(1.82, 1.18, 0.12), panelMaterial);
+  face.position.set(0, 1.72, 0.42);
+  group.add(face);
+
+  const button = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.46, 0.22, 24), statusMaterial);
+  button.rotation.x = Math.PI / 2;
+  button.position.set(0, 1.57, 0.56);
+  group.add(button);
+
+  const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), statusMaterial);
+  lamp.position.set(0.7, 2.13, 0.5);
+  group.add(lamp);
+
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 256;
+  labelCanvas.height = 96;
+  const labelContext = labelCanvas.getContext('2d');
+  labelContext.fillStyle = 'rgba(25,27,24,.94)';
+  labelContext.beginPath();
+  labelContext.roundRect(4, 4, 248, 88, 22);
+  labelContext.fill();
+  labelContext.fillStyle = '#ffffff';
+  labelContext.font = '800 54px Inter, system-ui, sans-serif';
+  labelContext.textAlign = 'center';
+  labelContext.textBaseline = 'middle';
+  labelContext.fillText('SOS', 128, 50);
+  const labelTexture = new THREE.CanvasTexture(labelCanvas);
+  labelTexture.colorSpace = THREE.SRGBColorSpace;
+  const label = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: labelTexture,
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false
+  }));
+  label.position.set(0, 3.05, 0);
+  label.scale.set(2.8, 1.05, 1);
+  label.renderOrder = 6;
+  group.add(label);
+
+  const beacon = createDeviceBeacon(DEVICE_COLORS.green, 1.45);
+  group.userData.beacon = beacon;
+  group.add(beacon);
+  const aura = createAlertAura(7.2, 7.2);
+  aura.position.set(0, 1.65, -0.34);
+  group.userData.alertAura = aura;
+  group.add(aura);
+  const alertLight = createAlertLight();
+  alertLight.position.y = 2.1;
+  alertLight.distance = 16;
+  group.userData.alertLight = alertLight;
+  group.add(alertLight);
+  group.userData.colorMaterials = [statusMaterial];
+  return group;
+}
+
 function createCompactRegionalDevice(type) {
   const group = new THREE.Group();
   if (type === 'ac') {
@@ -1393,7 +1468,8 @@ function colorToCss(colorName) {
   return `#${(DEVICE_COLORS[colorName] ?? DEVICE_COLORS.green).toString(16).padStart(6, '0')}`;
 }
 
-function getDeviceStatus(colorName) {
+function getDeviceStatus(colorName, type) {
+  if (type === 'sos') return colorName === 'red' ? 'SOS 已啟動' : '正常待命';
   return colorName === 'red' ? '異常' : colorName === 'gray' ? '離線' : '正常';
 }
 
@@ -1479,7 +1555,7 @@ function updateDeviceTooltip(device, clientX, clientY) {
   deviceTooltip.querySelector('[data-field="name"]').textContent = data.name;
   deviceTooltip.querySelector('[data-field="energy"]').textContent = data.energy;
   deviceTooltip.querySelector('[data-field="runtime"]').textContent = data.runtime;
-  deviceTooltip.querySelector('[data-field="status"]').textContent = getDeviceStatus(colorName);
+  deviceTooltip.querySelector('[data-field="status"]').textContent = getDeviceStatus(colorName, device.userData.config?.type);
   deviceTooltip.querySelector('[data-field="gateway"]').textContent = data.gateway;
   const dot = deviceTooltip.querySelector('.tooltip-status-dot');
   dot.style.background = colorToCss(colorName);
@@ -1529,6 +1605,21 @@ function createDynamicDeviceCard(config) {
   const card = document.createElement('section');
   card.className = 'device-card';
   card.dataset.device = config.id;
+  const statusControls = config.type === 'sos'
+    ? `
+      <div class="asset-state-picker sos-state-picker" role="group" aria-label="SOS 開關狀態">
+        <button data-color="green" type="button" aria-label="關閉 SOS・綠燈" aria-pressed="true"><i></i>關閉・綠燈</button>
+        <button data-color="red" type="button" aria-label="啟動 SOS・紅燈" aria-pressed="false"><i></i>啟動・紅燈</button>
+      </div>
+    `
+    : `
+      <div class="color-picker">
+        <span>狀態</span>
+        <button class="color-swatch green" data-color="green" type="button" aria-label="綠色" aria-pressed="true"></button>
+        <button class="color-swatch red" data-color="red" type="button" aria-label="紅色" aria-pressed="false"></button>
+        <button class="color-swatch gray" data-color="gray" type="button" aria-label="灰色" aria-pressed="false"></button>
+      </div>
+    `;
   card.innerHTML = `
     <div class="device-card-title">
       <span class="device-dot"></span>
@@ -1539,16 +1630,11 @@ function createDynamicDeviceCard(config) {
       <label><span>Y</span><input data-axis="y" type="number" step="0.1" inputmode="decimal"></label>
       <label><span>Z</span><input data-axis="z" type="number" step="0.1" inputmode="decimal"></label>
     </div>
-    <div class="color-picker">
-      <span>狀態</span>
-      <button class="color-swatch green" data-color="green" type="button" aria-label="綠色" aria-pressed="true"></button>
-      <button class="color-swatch red" data-color="red" type="button" aria-label="紅色" aria-pressed="false"></button>
-      <button class="color-swatch gray" data-color="gray" type="button" aria-label="灰色" aria-pressed="false"></button>
-    </div>
+    ${statusControls}
   `;
   card.querySelector('strong').textContent = config.label;
   card.querySelector('small').textContent = config.location;
-  card.querySelector('.color-picker').setAttribute('aria-label', `${config.label}設備顏色`);
+  card.querySelector('.color-picker')?.setAttribute('aria-label', `${config.label}設備顏色`);
   document.querySelector('.axis-note').before(card);
   return card;
 }
@@ -1561,7 +1647,7 @@ function getDeviceAdjustmentLabel(device) {
   const type = device.userData.config?.type;
   const matchingDevices = [...deviceObjects.values()].filter((entry) => entry.userData.config?.type === type);
   const number = Math.max(1, matchingDevices.indexOf(device) + 1);
-  const typeLabel = type === 'ac' ? '冷氣' : '溫濕度感應器';
+  const typeLabel = type === 'ac' ? '冷氣' : type === 'sos' ? 'SOS 緊急設備' : '溫濕度感應器';
   return `${typeLabel} ${String(number).padStart(2, '0')}`;
 }
 
@@ -1621,6 +1707,9 @@ function bindDeviceCard(card, device) {
     button.setAttribute('aria-pressed', String(selected));
     button.addEventListener('click', () => {
       applyDeviceColor(device, button.dataset.color);
+      if (device.userData.config?.type === 'sos') {
+        device.userData.data.runtime = device.userData.color === 'red' ? '警報已啟動' : '待命中';
+      }
       card.querySelector('.device-dot').style.background = colorToCss(device.userData.color);
       card.querySelectorAll('button[data-color]').forEach((swatch) => {
         swatch.setAttribute('aria-pressed', String(swatch === button));
@@ -1635,7 +1724,9 @@ function createDeviceObject(config, savedPositions) {
     ? createCompactRegionalDevice(config.type)
     : config.type === 'ac'
       ? createAirConditioner()
-      : createTemperatureSensor();
+      : config.type === 'sos'
+        ? createSosEmergencyDevice()
+        : createTemperatureSensor();
   const planPosition = Number.isFinite(config.svgX) && Number.isFinite(config.svgY)
     ? svgPointToWorld(config.svgX, config.svgY)
     : new THREE.Vector3(config.x ?? 0, 0, config.z ?? 0);
