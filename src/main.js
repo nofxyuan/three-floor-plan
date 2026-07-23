@@ -2074,9 +2074,11 @@ function applyTimeLighting() {
       30 + Math.sin(progress * Math.PI) * 38
     );
     sun.color.copy(sunColor);
-    sun.intensity = 1.25 + elevation * 1.55;
-    hemisphere.intensity = 0.68 + elevation * 0.48;
-    fill.intensity = 0.14 + elevation * 0.24;
+    // Keep the floor-plan shadows readable without letting walls, columns and
+    // devices produce heavy dark patches across the plan.
+    sun.intensity = 1.05 + elevation * 1.2;
+    hemisphere.intensity = 0.9 + elevation * 0.5;
+    fill.intensity = 0.28 + elevation * 0.28;
     renderer.toneMappingExposure = 0.65 + elevation * 0.12;
 
     const morningBackground = new THREE.Color(0xbfc8cd);
@@ -2097,9 +2099,9 @@ function applyTimeLighting() {
     const beforeDawn = hour < 6;
     sun.position.set(beforeDawn ? 76 : -76, 30, -42);
     sun.color.setHex(0x9db7df);
-    sun.intensity = 0.62;
-    hemisphere.intensity = 0.46;
-    fill.intensity = 0.16;
+    sun.intensity = 0.48;
+    hemisphere.intensity = 0.58;
+    fill.intensity = 0.24;
     renderer.toneMappingExposure = 0.58;
     background.setHex(0x8f969e);
     floorWallMaterial?.color.setHex(0x8a8e91);
