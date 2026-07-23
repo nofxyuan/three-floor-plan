@@ -305,6 +305,9 @@ const fill = new THREE.DirectionalLight(0xc8d6ff, 1.2);
 fill.position.set(75, 42, -55);
 scene.add(fill);
 
+const officeAmbient = new THREE.AmbientLight(0xffe4b5, 0);
+scene.add(officeAmbient);
+
 const SCENE_THEMES = {
   building: {
     background: 0xe8e8e3,
@@ -332,6 +335,7 @@ function applySceneTheme(mode) {
   sun.intensity = theme.sun;
   fill.intensity = theme.fill;
   if (mode === 'building') {
+    officeAmbient.intensity = 0;
     sun.color.setHex(0xfffdf5);
     sun.position.set(-48, 90, 45);
     hemisphere.color.setHex(0xffffff);
@@ -1112,6 +1116,15 @@ function updateLightingObject(lightId) {
   object.userData.glow.visible = state.on;
 }
 
+function updateOfficeLightingLevel() {
+  const activeCount = LIGHTING_FIXTURES.reduce(
+    (count, fixture) => count + (lightingStates[fixture.id]?.on ? 1 : 0),
+    0
+  );
+  const activeRatio = activeCount / LIGHTING_FIXTURES.length;
+  officeAmbient.intensity = sceneMode === 'floor' ? 0.04 + activeRatio * 0.68 : 0;
+}
+
 function createLightingFixtures() {
   LIGHTING_FIXTURES.forEach((fixture) => {
     const object = createLightBulb();
@@ -1124,6 +1137,7 @@ function createLightingFixtures() {
     model.add(object);
     updateLightingObject(fixture.id);
   });
+  updateOfficeLightingLevel();
 }
 
 function createCctvCamera() {
@@ -2082,6 +2096,8 @@ const meetingStatusToggle = document.querySelector('#meeting-status-toggle');
 const meetingStatusButtons = [...document.querySelectorAll('[data-meeting-status]')];
 const lightingSelect = document.querySelector('#lighting-select');
 const lightingStateButtons = [...document.querySelectorAll('[data-lighting-state]')];
+const lightingGroupButtons = [...document.querySelectorAll('[data-lighting-group]')];
+const lightingGroupStatus = document.querySelector('#lighting-group-status');
 const lightingTimeButtons = [...document.querySelectorAll('[data-lighting-time]')];
 const daylightStatus = document.querySelector('#daylight-status');
 const cctvSelect = document.querySelector('#cctv-select');
@@ -2170,6 +2186,7 @@ function applyTimeLighting() {
   fill.color.setHex(daylight ? 0xb7c9da : 0x7188ad);
   scene.background.copy(background);
   scene.fog.color.copy(background);
+  updateOfficeLightingLevel();
 }
 
 function syncLightingTimeControls() {
@@ -2237,6 +2254,22 @@ function syncLightingControls() {
   lightingStateButtons.forEach((button) => {
     button.setAttribute('aria-pressed', String((button.dataset.lightingState === 'on') === state.on));
   });
+  const activeCount = LIGHTING_FIXTURES.reduce(
+    (count, fixture) => count + (lightingStates[fixture.id]?.on ? 1 : 0),
+    0
+  );
+  lightingGroupStatus.textContent = activeCount === LIGHTING_FIXTURES.length
+    ? '全部開啟'
+    : activeCount === 0
+      ? '全部關閉'
+      : `${activeCount} / ${LIGHTING_FIXTURES.length} 已開啟`;
+  lightingGroupButtons.forEach((button) => {
+    const isAllOn = activeCount === LIGHTING_FIXTURES.length;
+    const isAllOff = activeCount === 0;
+    button.setAttribute('aria-pressed', String(
+      button.dataset.lightingGroup === 'on' ? isAllOn : isAllOff
+    ));
+  });
 }
 
 lightingSelect.addEventListener('change', syncLightingControls);
@@ -2246,7 +2279,21 @@ lightingStateButtons.forEach((button) => {
     lightingStates[lightId].on = button.dataset.lightingState === 'on';
     updateLightingObject(lightId);
     saveLightingStates();
+    updateOfficeLightingLevel();
     syncLightingControls();
+  });
+});
+lightingGroupButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const turnOn = button.dataset.lightingGroup === 'on';
+    LIGHTING_FIXTURES.forEach((fixture) => {
+      lightingStates[fixture.id].on = turnOn;
+      updateLightingObject(fixture.id);
+    });
+    saveLightingStates();
+    updateOfficeLightingLevel();
+    syncLightingControls();
+    markPowerActivity();
   });
 });
 syncLightingControls();

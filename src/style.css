@@ -351,6 +351,10 @@ body { overscroll-behavior: none; }
 .asset-select > span { color: #777970; font-size: 10px; }
 .asset-select select { min-width: 0; height: 35px; padding: 0 28px 0 9px; border: 1px solid rgba(25,26,23,.1); border-radius: 9px; outline: 0; color: #20211e; background: #f7f7f3; font: 600 10px/1 inherit; cursor: pointer; }
 .asset-select select:focus { border-color: #70736b; box-shadow: 0 0 0 3px rgba(70,73,67,.1); }
+.lighting-group-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lighting-group-heading strong { font-size: 10px; font-weight: 700; }
+.lighting-group-heading small { color: #777970; font-size: 9px; }
+.lighting-group-picker { margin: 7px 0 12px; }
 .asset-state-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
 .asset-state-picker button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 8px; border: 1px solid rgba(25,26,23,.1); border-radius: 9px; color: #64665f; background: #f7f7f3; font: 650 10px/1 inherit; cursor: pointer; transition: border-color .16s ease, background-color .16s ease, color .16s ease, transform .16s ease; }
 .asset-state-picker button:active { transform: scale(.97); }
@@ -367,6 +371,10 @@ body { overscroll-behavior: none; }
 .lighting-state-picker button[data-lighting-state="off"] i { background: #959790; }
 .lighting-state-picker button[data-lighting-state="on"][aria-pressed="true"] { color: #775b00; background: rgba(255,211,61,.18); border-color: rgba(211,166,17,.42); }
 .lighting-state-picker button[data-lighting-state="off"][aria-pressed="true"] { color: #555852; background: rgba(149,151,144,.18); border-color: rgba(119,121,115,.38); }
+.lighting-group-picker button[data-lighting-group="on"] i { background: #ffd33d; box-shadow: 0 0 0 3px rgba(255,211,61,.14); }
+.lighting-group-picker button[data-lighting-group="off"] i { background: #777a74; }
+.lighting-group-picker button[data-lighting-group="on"][aria-pressed="true"] { color: #664c00; background: rgba(255,211,61,.24); border-color: rgba(211,166,17,.54); }
+.lighting-group-picker button[data-lighting-group="off"][aria-pressed="true"] { color: #fff; background: #666a63; border-color: #666a63; }
 .cctv-state-picker button[data-cctv-state="online"] i { background: #171916; }
 .cctv-state-picker button[data-cctv-state="offline"] i { background: #969992; }
 .cctv-state-picker button[data-cctv-state="online"][aria-pressed="true"] { color: #fff; background: #20221f; border-color: #20221f; }
