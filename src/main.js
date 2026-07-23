@@ -1143,7 +1143,13 @@ function createLightingFixtures() {
 function createCctvCamera() {
   const group = new THREE.Group();
   const mountMaterial = new THREE.MeshStandardMaterial({ color: 0xb9bbb5, roughness: 0.5, metalness: 0.18 });
-  const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x1c1e1b, roughness: 0.38, metalness: 0.18 });
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    color: 0x367fb2,
+    emissive: 0x092a42,
+    emissiveIntensity: 0.2,
+    roughness: 0.36,
+    metalness: 0.16
+  });
   const lensMaterial = new THREE.MeshStandardMaterial({ color: 0x080908, roughness: 0.16, metalness: 0.55 });
 
   const mount = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.62, 14), mountMaterial);
@@ -1183,8 +1189,12 @@ function updateCctvObject(cctvId) {
   const object = cctvObjects.get(cctvId);
   const state = cctvStates[cctvId];
   if (!object || !state) return;
-  const color = state.online ? 0x1c1e1b : 0x8d9089;
-  object.userData.bodyMaterials.forEach((material) => material.color.setHex(color));
+  const color = state.online ? 0x367fb2 : 0x8b9aa3;
+  object.userData.bodyMaterials.forEach((material) => {
+    material.color.setHex(color);
+    material.emissive.setHex(state.online ? 0x092a42 : 0x000000);
+    material.emissiveIntensity = state.online ? 0.2 : 0;
+  });
   object.userData.indicatorMaterial.color.setHex(state.online ? 0x45dd63 : 0x9a9d96);
   object.rotation.y = -THREE.MathUtils.degToRad(CCTV_DIRECTIONS[state.direction].degrees);
 }
