@@ -342,6 +342,7 @@ body { overscroll-behavior: none; }
 .asset-control-heading strong { font-size: 12px; font-weight: 700; }
 .asset-control-heading small { margin-top: 2px; color: #777970; font-size: 9px; }
 .asset-icon { position: relative; width: 22px; height: 22px; flex: 0 0 auto; }
+.daylight-icon { width: 16px; height: 16px; flex: 0 0 auto; border-radius: 50%; background: #f3bc58; box-shadow: 0 0 0 4px rgba(243,188,88,.14), 0 0 15px rgba(243,188,88,.28); }
 .bulb-icon::before { content: ""; position: absolute; top: 1px; left: 5px; width: 12px; height: 12px; border-radius: 50%; background: #ffd44d; box-shadow: 0 0 0 4px rgba(255,212,77,.16); }
 .bulb-icon::after { content: ""; position: absolute; left: 8px; bottom: 1px; width: 6px; height: 8px; border-radius: 2px; background: #8f8f88; }
 .camera-icon::before { content: ""; position: absolute; top: 5px; left: 1px; width: 15px; height: 12px; border-radius: 3px; background: #252724; }
@@ -354,6 +355,14 @@ body { overscroll-behavior: none; }
 .asset-state-picker button { display: flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 8px; border: 1px solid rgba(25,26,23,.1); border-radius: 9px; color: #64665f; background: #f7f7f3; font: 650 10px/1 inherit; cursor: pointer; transition: border-color .16s ease, background-color .16s ease, color .16s ease, transform .16s ease; }
 .asset-state-picker button:active { transform: scale(.97); }
 .asset-state-picker button i { width: 8px; height: 8px; border-radius: 50%; }
+.daylight-state-picker { grid-template-columns: repeat(3, 1fr); }
+.daylight-state-picker button { padding-inline: 5px; }
+.daylight-state-picker button[data-lighting-time="auto"] i { background: #73776f; }
+.daylight-state-picker button[data-lighting-time="morning"] i { background: #8fb8d4; }
+.daylight-state-picker button[data-lighting-time="evening"] i { background: #e78a4d; }
+.daylight-state-picker button[data-lighting-time="auto"][aria-pressed="true"] { color: #fff; background: #555951; border-color: #555951; }
+.daylight-state-picker button[data-lighting-time="morning"][aria-pressed="true"] { color: #315d78; background: rgba(143,184,212,.2); border-color: rgba(95,151,189,.44); }
+.daylight-state-picker button[data-lighting-time="evening"][aria-pressed="true"] { color: #8b481e; background: rgba(231,138,77,.2); border-color: rgba(205,106,41,.44); }
 .lighting-state-picker button[data-lighting-state="on"] i { background: #ffd33d; box-shadow: 0 0 0 3px rgba(255,211,61,.14); }
 .lighting-state-picker button[data-lighting-state="off"] i { background: #959790; }
 .lighting-state-picker button[data-lighting-state="on"][aria-pressed="true"] { color: #775b00; background: rgba(255,211,61,.18); border-color: rgba(211,166,17,.42); }

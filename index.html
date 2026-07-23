@@ -124,6 +124,18 @@
           </div>
         </section>
 
+        <section class="asset-control-card daylight-control" aria-label="日照時間設定">
+          <div class="asset-control-heading">
+            <span class="daylight-icon" aria-hidden="true"></span>
+            <div><strong>日照光影</strong><small id="daylight-status">跟隨系統時間</small></div>
+          </div>
+          <div class="asset-state-picker daylight-state-picker" role="group" aria-label="日照時間">
+            <button data-lighting-time="auto" type="button" aria-pressed="true"><i></i>即時</button>
+            <button data-lighting-time="morning" type="button" aria-pressed="false"><i></i>早晨</button>
+            <button data-lighting-time="evening" type="button" aria-pressed="false"><i></i>傍晚</button>
+          </div>
+        </section>
+
         <section class="asset-control-card lighting-control" aria-label="照明控制">
           <div class="asset-control-heading">
             <span class="asset-icon bulb-icon" aria-hidden="true"></span>

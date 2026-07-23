@@ -36,6 +36,7 @@ const MEETING_ROOMS = [
 const LIGHTING_STORAGE_KEY = 'three-floor-plan-lighting-states';
 const CCTV_STORAGE_KEY = 'three-floor-plan-cctv-states';
 const CCTV_POSITION_STORAGE_KEY = 'three-floor-plan-cctv-positions';
+const LIGHT_TIME_MODE_KEY = 'three-floor-plan-light-time-mode';
 const CCTV_DIRECTIONS = {
   n: { label: '北', degrees: 0 },
   ne: { label: '東北', degrees: 45 },
@@ -330,6 +331,15 @@ function applySceneTheme(mode) {
   hemisphere.intensity = theme.hemisphere;
   sun.intensity = theme.sun;
   fill.intensity = theme.fill;
+  if (mode === 'building') {
+    sun.color.setHex(0xfffdf5);
+    sun.position.set(-48, 90, 45);
+    hemisphere.color.setHex(0xffffff);
+    hemisphere.groundColor.setHex(0x8f918a);
+    fill.color.setHex(0xc8d6ff);
+  } else {
+    applyTimeLighting();
+  }
 }
 
 const model = new THREE.Group();
@@ -2012,6 +2022,8 @@ const meetingStatusToggle = document.querySelector('#meeting-status-toggle');
 const meetingStatusButtons = [...document.querySelectorAll('[data-meeting-status]')];
 const lightingSelect = document.querySelector('#lighting-select');
 const lightingStateButtons = [...document.querySelectorAll('[data-lighting-state]')];
+const lightingTimeButtons = [...document.querySelectorAll('[data-lighting-time]')];
+const daylightStatus = document.querySelector('#daylight-status');
 const cctvSelect = document.querySelector('#cctv-select');
 const cctvStateButtons = [...document.querySelectorAll('[data-cctv-state]')];
 const cctvAngleSelect = document.querySelector('#cctv-angle-select');
@@ -2025,8 +2037,98 @@ const POWER_SAVE_ENABLED_KEY = 'three-floor-plan-power-save-enabled';
 const POWER_SAVE_MINUTES_KEY = 'three-floor-plan-power-save-minutes';
 let powerSaveEnabled = readLocalSetting(POWER_SAVE_ENABLED_KEY) !== 'false';
 let powerSaveMinutes = THREE.MathUtils.clamp(Number(readLocalSetting(POWER_SAVE_MINUTES_KEY)) || 3, 1, 60);
+let lightingTimeMode = ['auto', 'morning', 'evening'].includes(readLocalSetting(LIGHT_TIME_MODE_KEY))
+  ? readLocalSetting(LIGHT_TIME_MODE_KEY)
+  : 'auto';
 let lastPowerActivity = Date.now();
 let lastActivityUpdate = 0;
+
+function getLightingTime() {
+  if (lightingTimeMode === 'morning') return 8;
+  if (lightingTimeMode === 'evening') return 17.25;
+  const now = new Date();
+  return now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+}
+
+function applyTimeLighting() {
+  if (sceneMode !== 'floor') return;
+  const hour = getLightingTime();
+  const daylight = hour >= 6 && hour <= 18;
+  const background = new THREE.Color();
+
+  if (daylight) {
+    const progress = THREE.MathUtils.clamp((hour - 6) / 12, 0, 1);
+    const elevation = Math.sin(progress * Math.PI);
+    const warmEdge = Math.abs(progress - 0.5) * 2;
+    const morningColor = new THREE.Color(0xffd19a);
+    const eveningColor = new THREE.Color(0xffa56a);
+    const noonColor = new THREE.Color(0xfff8e8);
+    const edgeColor = progress < 0.5 ? morningColor : eveningColor;
+    const sunColor = noonColor.clone().lerp(edgeColor, warmEdge * 0.72);
+
+    sun.position.set(
+      Math.cos(progress * Math.PI) * 92,
+      16 + elevation * 82,
+      30 + Math.sin(progress * Math.PI) * 38
+    );
+    sun.color.copy(sunColor);
+    sun.intensity = 1.25 + elevation * 1.55;
+    hemisphere.intensity = 0.68 + elevation * 0.48;
+    fill.intensity = 0.14 + elevation * 0.24;
+    renderer.toneMappingExposure = 0.65 + elevation * 0.12;
+
+    const morningBackground = new THREE.Color(0xbfc8cd);
+    const noonBackground = new THREE.Color(0xc9cbc6);
+    const eveningBackground = new THREE.Color(0xc9b9ae);
+    background.copy(progress < 0.5 ? morningBackground : eveningBackground).lerp(noonBackground, elevation);
+  } else {
+    const beforeDawn = hour < 6;
+    sun.position.set(beforeDawn ? 76 : -76, 30, -42);
+    sun.color.setHex(0x9db7df);
+    sun.intensity = 0.62;
+    hemisphere.intensity = 0.46;
+    fill.intensity = 0.16;
+    renderer.toneMappingExposure = 0.58;
+    background.setHex(0x8f969e);
+  }
+
+  hemisphere.color.setHex(daylight ? 0xeaf0ee : 0x9caccc);
+  hemisphere.groundColor.setHex(daylight ? 0x747970 : 0x3f4650);
+  fill.color.setHex(daylight ? 0xb7c9da : 0x7188ad);
+  scene.background.copy(background);
+  scene.fog.color.copy(background);
+}
+
+function syncLightingTimeControls() {
+  lightingTimeButtons.forEach((button) => {
+    button.setAttribute('aria-pressed', String(button.dataset.lightingTime === lightingTimeMode));
+  });
+  const hour = getLightingTime();
+  const hours = Math.floor(hour);
+  const minutes = Math.floor((hour - hours) * 60);
+  const labels = {
+    auto: `跟隨系統時間・${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`,
+    morning: '早晨模式・08:00',
+    evening: '傍晚模式・17:15'
+  };
+  daylightStatus.textContent = labels[lightingTimeMode];
+}
+
+lightingTimeButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    lightingTimeMode = button.dataset.lightingTime;
+    writeLocalSetting(LIGHT_TIME_MODE_KEY, lightingTimeMode);
+    syncLightingTimeControls();
+    applyTimeLighting();
+    markPowerActivity();
+  });
+});
+syncLightingTimeControls();
+setInterval(() => {
+  if (lightingTimeMode !== 'auto') return;
+  syncLightingTimeControls();
+  applyTimeLighting();
+}, 60000);
 
 function syncMeetingRoomControls() {
   const state = meetingRoomStates[meetingRoomSelect.value];
