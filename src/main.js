@@ -1718,6 +1718,19 @@ function createBuildingOverview() {
     roughness: 0.38,
     metalness: 0.03
   });
+  const roadMarkMaterial = new THREE.MeshStandardMaterial({ color: 0xf2eee0, roughness: 0.9 });
+  const yellowRoadMarkMaterial = new THREE.MeshStandardMaterial({ color: 0xe6bd45, roughness: 0.86 });
+  const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x67513c, roughness: 0.96 });
+  const foliageMaterials = [
+    new THREE.MeshStandardMaterial({ color: 0x55765b, roughness: 0.94, flatShading: true }),
+    new THREE.MeshStandardMaterial({ color: 0x688867, roughness: 0.94, flatShading: true }),
+    new THREE.MeshStandardMaterial({ color: 0x476b52, roughness: 0.94, flatShading: true })
+  ];
+  const planterMaterial = new THREE.MeshStandardMaterial({ color: 0xb7b8b1, roughness: 0.9 });
+  const soilMaterial = new THREE.MeshStandardMaterial({ color: 0x665444, roughness: 1 });
+  const flowerMaterials = [0xd78480, 0xe2bc55, 0xe8e3d6].map((color) =>
+    new THREE.MeshStandardMaterial({ color, roughness: 0.88 })
+  );
 
   const addBox = (size, position, material, { castShadow = true, receiveShadow = false } = {}) => {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
@@ -1726,6 +1739,53 @@ function createBuildingOverview() {
     mesh.receiveShadow = receiveShadow;
     buildingGroup.add(mesh);
     return mesh;
+  };
+
+  const addTree = (x, z, scale = 1, foliageIndex = 0) => {
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22 * scale, 0.34 * scale, 3.2 * scale, 9),
+      trunkMaterial
+    );
+    trunk.position.set(x, 1.6 * scale, z);
+    trunk.castShadow = true;
+    buildingGroup.add(trunk);
+
+    const canopyGeometry = new THREE.DodecahedronGeometry(1.45 * scale, 0);
+    [[0, 4.05, 0], [-0.82, 3.72, 0.08], [0.78, 3.78, -0.04]].forEach(([offsetX, y, offsetZ], index) => {
+      const canopy = new THREE.Mesh(canopyGeometry, foliageMaterials[(foliageIndex + index) % foliageMaterials.length]);
+      canopy.position.set(x + offsetX * scale, y * scale, z + offsetZ * scale);
+      canopy.scale.set(1, 1.08, 0.9);
+      canopy.castShadow = true;
+      buildingGroup.add(canopy);
+    });
+  };
+
+  const addFlowerBed = (x, z, width, depth, rows = 2) => {
+    addBox([width, 0.46, depth], [x, 0.15, z], planterMaterial, { receiveShadow: true });
+    addBox([width - 0.32, 0.1, depth - 0.32], [x, 0.42, z], soilMaterial, { castShadow: false });
+    const columns = Math.max(3, Math.floor(width / 1.15));
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        const shrub = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(0.38 + ((row + column) % 2) * 0.08, 0),
+          foliageMaterials[(row + column) % foliageMaterials.length]
+        );
+        shrub.position.set(
+          x - width / 2 + 0.65 + column * ((width - 1.3) / Math.max(columns - 1, 1)),
+          0.78,
+          z - depth / 2 + 0.62 + row * Math.max(depth - 1.24, 0)
+        );
+        shrub.scale.y = 0.82;
+        shrub.castShadow = true;
+        buildingGroup.add(shrub);
+
+        if ((row + column) % 2 === 0) {
+          const flower = new THREE.Mesh(new THREE.SphereGeometry(0.13, 7, 5), flowerMaterials[(row + column) % flowerMaterials.length]);
+          flower.position.set(shrub.position.x, 1.13, shrub.position.z);
+          buildingGroup.add(flower);
+        }
+      }
+    }
   };
 
   const ground = new THREE.Mesh(
@@ -1847,44 +1907,42 @@ function createBuildingOverview() {
     addBox([0.22, 1.2, 27.4], [towerX + x, totalHeight + 1.1, 0], mullionMaterial, { castShadow: false });
   });
 
-  const labelCanvas = document.createElement('canvas');
-  labelCanvas.width = 512;
-  labelCanvas.height = 160;
-  const labelContext = labelCanvas.getContext('2d');
-  labelContext.fillStyle = 'rgba(255, 211, 64, .96)';
-  labelContext.beginPath();
-  labelContext.moveTo(28, 12);
-  labelContext.lineTo(484, 12);
-  labelContext.quadraticCurveTo(500, 12, 500, 28);
-  labelContext.lineTo(500, 132);
-  labelContext.quadraticCurveTo(500, 148, 484, 148);
-  labelContext.lineTo(28, 148);
-  labelContext.quadraticCurveTo(12, 148, 12, 132);
-  labelContext.lineTo(12, 28);
-  labelContext.quadraticCurveTo(12, 12, 28, 12);
-  labelContext.fill();
-  labelContext.fillStyle = '#242016';
-  labelContext.font = '700 66px Inter, sans-serif';
-  labelContext.fillText('14F', 42, 101);
-  labelContext.fillStyle = '#6f5918';
-  labelContext.font = '600 28px Inter, sans-serif';
-  labelContext.fillText('點選進入', 230, 95);
-  const labelTexture = new THREE.CanvasTexture(labelCanvas);
-  labelTexture.colorSpace = THREE.SRGBColorSpace;
-  const floorLabel = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTexture, transparent: true, depthTest: false }));
-  floorLabel.position.set(towerX + 31, (14 - 1) * floorHeight + 0.25, 0);
-  floorLabel.scale.set(15, 4.7, 1);
-  floorLabel.renderOrder = 20;
-  floorLabel.userData.floor = 14;
-  floor14Targets.push(floorLabel);
-  buildingGroup.add(floorLabel);
+  // Scaled streetscape: road markings, crossing, planters and medium-height
+  // trees keep the tower dominant while giving the entrance a lived-in context.
+  [-12, -3, 6, 15, 24, 33, 42, 51, 60].forEach((x) => {
+    addBox([4.6, 0.035, 0.2], [x, 0, 24.2], yellowRoadMarkMaterial, { castShadow: false });
+  });
+  [19.2, 29.2].forEach((z) => {
+    addBox([82, 0.035, 0.14], [towerX, 0, z], roadMarkMaterial, { castShadow: false });
+  });
+  for (let x = 53; x <= 59; x += 1.35) {
+    addBox([0.62, 0.045, 7.2], [x, 0.025, 24.2], roadMarkMaterial, { castShadow: false });
+  }
 
-  const calloutGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(towerX + 20.5, floorLabel.position.y, 0),
-    new THREE.Vector3(towerX + 24, floorLabel.position.y, 0)
-  ]);
-  const callout = new THREE.Line(calloutGeometry, new THREE.LineBasicMaterial({ color: 0xb88600 }));
-  buildingGroup.add(callout);
+  addFlowerBed(towerX - 14.2, 15.25, 11.5, 2.2);
+  addFlowerBed(towerX + 14.7, 15.25, 10.5, 2.2);
+  addFlowerBed(towerX - 31.5, 11.2, 6.8, 2.5);
+  addFlowerBed(towerX + 31.5, 10.8, 7.4, 2.5);
+
+  [
+    [towerX - 32, 6.8, 0.98, 0],
+    [towerX - 27, 15.3, 0.82, 1],
+    [towerX - 19.5, 15.2, 0.78, 2],
+    [towerX + 20.5, 15.3, 0.8, 1],
+    [towerX + 27.5, 14.6, 0.88, 2],
+    [towerX + 34, 6.5, 1.02, 0]
+  ].forEach((tree) => addTree(...tree));
+
+  const signBlueMaterial = new THREE.MeshStandardMaterial({ color: 0x315f7e, roughness: 0.5, metalness: 0.12 });
+  const signWhiteMaterial = new THREE.MeshStandardMaterial({ color: 0xf1f0e9, roughness: 0.72 });
+  const signPoleMaterial = new THREE.MeshStandardMaterial({ color: 0x747b7c, roughness: 0.48, metalness: 0.55 });
+  const signPole = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.14, 3.1, 10), signPoleMaterial);
+  signPole.position.set(towerX + 33.2, 1.55, 17.1);
+  signPole.castShadow = true;
+  buildingGroup.add(signPole);
+  addBox([2.25, 1.2, 0.16], [towerX + 33.2, 3.15, 17.1], signBlueMaterial);
+  addBox([1.35, 0.12, 0.05], [towerX + 33.2, 3.22, 17.0], signWhiteMaterial, { castShadow: false });
+  addBox([0.12, 0.46, 0.05], [towerX + 33.72, 3.22, 17.0], signWhiteMaterial, { castShadow: false });
 }
 
 const cameraStates = {
