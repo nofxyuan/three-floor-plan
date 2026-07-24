@@ -90,7 +90,7 @@ const DEVICE_CONFIGS = [
     data: { name: '擴編主管室溫濕度感應器', energy: '0.08 kWh', runtime: '18 天 7 小時', gateway: '14F-GW-02' }
   },
   {
-    id: 'sos-emergency', x: 0, z: 0, y: 0.18, type: 'sos', color: 'green', label: 'SOS 緊急設備', location: '畫面中央',
+    id: 'sos-emergency', x: 0, z: 0, y: 0.18, scale: 1.55, type: 'sos', color: 'green', label: 'SOS 警示燈', location: '畫面中央',
     data: { name: 'SOS 緊急設備', energy: '0.02 kWh', runtime: '待命中', gateway: '14F-GW-SOS' }
   }
 ];

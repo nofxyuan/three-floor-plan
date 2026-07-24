@@ -1,28 +1,19 @@
-import { createHash } from 'node:crypto';
-import { copyFile, readFile, stat, writeFile } from 'node:fs/promises';
+import { copyFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const distIndex = resolve('dist/index.html');
 const distAssets = resolve('dist/assets');
+const assetNames = await readdir(distAssets);
+const appName = assetNames.find((name) => /^app-[\w-]+\.js$/.test(name));
+const cssName = assetNames.find((name) => /^index-[\w-]+\.css$/.test(name));
 const compatibilityCopies = [
-  ['app.js', 'index-iRskJCgP.js'],
-  ['index.css', 'index-YN6Yaz_h.css'],
+  [appName, ['app.js', 'index-iRskJCgP.js']],
+  [cssName, ['index.css', 'index-YN6Yaz_h.css']],
 ];
 
-for (const [sourceName, compatibilityName] of compatibilityCopies) {
+for (const [sourceName, compatibilityNames] of compatibilityCopies) {
+  if (!sourceName) continue;
   const source = resolve(distAssets, sourceName);
-  try {
-    await stat(source);
+  for (const compatibilityName of compatibilityNames) {
     await copyFile(source, resolve(distAssets, compatibilityName));
-  } catch (error) {
-    if (error?.code !== 'ENOENT') throw error;
   }
 }
-
-let indexHtml = await readFile(distIndex, 'utf8');
-for (const assetName of ['app.js', 'index.css']) {
-  const asset = await readFile(resolve(distAssets, assetName));
-  const version = createHash('sha256').update(asset).digest('hex').slice(0, 10);
-  indexHtml = indexHtml.replaceAll(`assets/${assetName}`, `assets/${assetName}?v=${version}`);
-}
-await writeFile(distIndex, indexHtml);
