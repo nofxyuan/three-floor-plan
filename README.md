@@ -64,6 +64,14 @@ pnpm preview
 
 > 版本號為功能里程碑整理，詳細變更以 Git Commit 為準。
 
+### v1.8.1 — 警示燈公開版修正（2026-07-24）
+
+- 放大 SOS 警示燈模型，提高 3D 全景中的辨識度。
+- GitHub Pages 改用內容雜湊檔名，避免瀏覽器或 CDN 持續載入舊模型。
+- 保留舊版靜態資源網址相容檔。
+
+相關提交：[警示燈公開版修正](https://github.com/nofxyuan/three-floor-plan/commit/de4d960)
+
 ### v1.8.0 — SOS 警示燈造型（2026-07-23）
 
 - SOS 設備改為透明圓頂警示燈模型。
